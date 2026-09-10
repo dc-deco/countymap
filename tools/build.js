@@ -35,6 +35,12 @@ if (backdropSrc && wideFile && wideFile !== backdropSrc &&
   console.error(`  ! ${path.basename(backdropSrc)} is newer than ${path.basename(wideFile)} — ` +
     `run tools/backdrop.py to regenerate, or the old backdrop stays inlined`);
 }
+/* Welcome sheet header. Optional: with no file the sheet simply has no image. */
+const welcomeFile = pick(['welcome.webp','welcome.jpg','welcome.jpeg','welcome.png']);
+const welcomeImg = welcomeFile
+  ? `<img class="welcomeimg" src="${uriFor(welcomeFile)}" alt="The Welcome to Kentucky state line sign, reading Unbridled Spirit">`
+  : '';
+
 let backdropCss = '';
 if (wideFile) {
   backdropCss =
@@ -89,6 +95,7 @@ const subs = {
   __FRAME__: JSON.stringify(FRAME),
   __FACTS__: JSON.stringify(FACTS),
   __BACKDROP_CSS__: backdropCss,
+  __WELCOME_IMG__: welcomeImg,
 };
 
 /* every county must carry a fact, or the reveal falls flat for that round */
@@ -104,6 +111,9 @@ fs.writeFileSync(OUT, html);
 console.log(`wrote ${OUT}  ${(fs.statSync(OUT).size/1024).toFixed(0)} KB`);
 console.log(`  ${NAMES.length} counties, ${W.rivers.length} river segs, ${W.lakes.length} lakes, ${W.urban.length} urban`);
 console.log(`  relief ${(webp.length/1024).toFixed(0)} KB webp -> ${(webp.length*4/3/1024).toFixed(0)} KB base64`);
+console.log(welcomeFile
+  ? `  welcome ${path.basename(welcomeFile)} ${(fs.statSync(welcomeFile).size/1024).toFixed(0)} KB`
+  : '  welcome image none');
 console.log(wideFile
   ? `  backdrop ${path.basename(wideFile)} ${(fs.statSync(wideFile).size/1024).toFixed(0)} KB` +
     (tallFile ? ` + ${path.basename(tallFile)} ${(fs.statSync(tallFile).size/1024).toFixed(0)} KB` : ' (no portrait crop)') +

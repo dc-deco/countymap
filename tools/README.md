@@ -41,6 +41,17 @@ full-viewport fixed layer costs GPU on phones, and a pre-blurred image also
 compresses about 3x smaller. Delete `backdrop.webp` (and the `.jpeg`) and the
 build simply omits the rule.
 
+The welcome sheet's header is `tools/data/welcome.webp`, inlined the same
+way. Regenerate it from the source with:
+
+```sh
+python3 tools/backdrop.py tools/data/welcome.jpeg tools/data/welcome.webp \
+  --width 1040 --blur 0 --sat 1.0 --q 82
+```
+
+Remove the file and the sheet simply renders without an image. The copy
+itself lives in `tools/template.html`.
+
 To fix or reword a county fun fact, edit `tools/data/facts.json` (a plain
 name -> sentence map) and rebuild. The build fails if any of the 120 counties
 is missing a fact, or if a fact names a county that does not exist. Facts are

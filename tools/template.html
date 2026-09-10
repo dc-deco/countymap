@@ -85,7 +85,7 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
 .cell.pending .v{color:var(--line-2)}
 .cell.now{border-color:var(--ink);border-width:2px}
 
-#results{
+dialog.pop{
   /* a modal dialog is centred by the UA in the top layer; hand-positioning it
      fought that and pushed the frame off screen. Only the non-modal fallback
      below needs placing. */
@@ -94,26 +94,26 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
   border:1px solid var(--ink);background:var(--panel);
   color:var(--ink);box-shadow:0 18px 50px rgba(20,28,24,.34);
 }
-/* display lives on [open] only: a bare #results{display:flex} outranks the UA
+/* display lives on [open] only: a bare dialog.pop{display:flex} outranks the UA
    rule that hides a closed dialog, leaving it over the page eating clicks.
    The frame is fixed and the sheet inside it scrolls, so the close button
    stays reachable after reading down through the five facts. */
-#results[open]{display:flex;flex-direction:column}
+dialog.pop[open]{display:flex;flex-direction:column}
 /* min-height:0 or the flex item refuses to shrink below its content and the
    dialog grows past max-height, pushing its top off screen */
-#results .sheet{flex:1 1 auto;min-height:0;overflow-y:auto;
+dialog.pop .sheet{flex:1 1 auto;min-height:0;overflow-y:auto;
   -webkit-overflow-scrolling:touch;padding:20px 18px 22px}
-#results::backdrop{background:rgba(22,30,26,.55)}
-#results:not(:modal){position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60}
+dialog.pop::backdrop{background:rgba(22,30,26,.55)}
+dialog.pop:not(:modal){position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60}
 html.locked,html.locked body{overflow:hidden}
-#results .x{
+dialog.pop .x{
   position:absolute;top:8px;right:8px;z-index:2;width:36px;height:36px;padding:0;
   font-size:22px;line-height:1;border-color:var(--line);background:var(--panel);
 }
-#results .step{margin:0 0 2px}
+dialog.pop .step{margin:0 0 2px}
 .resverdict{font-size:24px;line-height:1.12;font-weight:600;letter-spacing:-.02em;margin:0 0 8px;padding-right:36px}
-#results .big{font-size:44px;font-weight:600;letter-spacing:-.02em;line-height:1;margin:0}
-#results #copy{width:100%}
+dialog.pop .big{font-size:44px;font-weight:600;letter-spacing:-.02em;line-height:1;margin:0}
+dialog.pop #copy{width:100%}
 .rechead{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);
   font-weight:600;margin:22px 0 0;border-top:1px solid var(--line);padding-top:12px}
 .recap{list-style:none;margin:0;padding:0}
@@ -122,6 +122,14 @@ html.locked,html.locked body{overflow:hidden}
 .rname{margin:0;font-weight:600;font-size:15px;display:flex;gap:10px;align-items:baseline}
 .rscore{margin-left:auto;font-weight:400;font-size:13px;color:var(--ink-2);white-space:nowrap}
 .rfact{margin:3px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2)}
+/* full-bleed header: cancel the sheet's padding so the sign meets the edges */
+.welcomeimg{display:block;width:calc(100% + 36px);height:auto;margin:-20px -18px 16px}
+.weltitle{font-size:21px;line-height:1.2;font-weight:600;letter-spacing:-.01em;margin:0 0 4px;padding-right:34px}
+dialog.pop .body{font-size:15px;line-height:1.55;margin:10px 0 0}
+dialog.pop #welGo{width:100%;margin-top:18px}
+.linky{background:none;border:0;padding:0;font-size:inherit;color:var(--ink-2);
+  text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.linky:hover{color:var(--ink)}
 .final{margin-top:20px;border-top:2px solid var(--ink);padding-top:14px}
 .final button{width:100%}
 .final .big{font-size:46px;font-weight:600;letter-spacing:-.02em;line-height:1}
@@ -176,12 +184,28 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
 
 <div class="readout" id="readout"></div>
 <div class="fact" id="fact" hidden><span class="lede" id="factLede"></span><span id="factText"></span></div>
-<p class="hint">Drag to pan, pinch or scroll to zoom. Tap to drop a pin, then lock it in.</p>
+<p class="hint">Drag to pan, pinch or scroll to zoom. Tap to drop a pin, then lock it in.
+<button class="linky" id="howto">How to play</button></p>
 
 <div class="tape" id="tape"></div>
 <div id="final"></div>
 
-<dialog id="results" aria-labelledby="resTitle">
+<dialog id="welcome" class="pop" aria-labelledby="welTitle">
+  <button id="welClose" class="x" aria-label="Close">&times;</button>
+  <div class="sheet">
+  __WELCOME_IMG__
+  <h2 class="weltitle" id="welTitle">Hey Y'all, welcome to County As Hell, a Kentucky map game.</h2>
+  <h3 class="rechead" style="margin-top:14px">Do what now?</h3>
+  <p class="body">What we're gonna do here is select the location of 5 different counties in
+  Kentucky a day, then share it with your friends.</p>
+  <p class="body">Navigate the map by dragging, pinching, and scrolling. Tap to drop a pin, and
+  if you think you've nailed the county, well then lock it in.</p>
+  <p class="body">Come back every day for a new set of 5 counties for ya.</p>
+  <button id="welGo" class="primary" autofocus>Let&#39;s go</button>
+  </div>
+</dialog>
+
+<dialog id="results" class="pop" aria-labelledby="resTitle">
   <button id="resClose" class="x" aria-label="Close results">&times;</button>
   <div class="sheet">
   <p class="step" id="resStep"></p>
@@ -498,31 +522,58 @@ function wireShare(share){
   };
 }
 
-const dlg = document.getElementById("results");
-function openResults(){
+function releaseLock(){
+  /* only unlock once nothing is left open */
+  if(!document.querySelector("dialog.pop[open]")) document.documentElement.classList.remove("locked");
+}
+function openPop(d){
   document.documentElement.classList.add("locked");
-  if(typeof dlg.showModal === "function" && !dlg.open) dlg.showModal();
-  else dlg.setAttribute("open","");
-  dlg.scrollTop = 0;
+  if(typeof d.showModal === "function" && !d.open) d.showModal();
+  else d.setAttribute("open","");
+  const sheet = d.querySelector(".sheet");
+  if(sheet) sheet.scrollTop = 0;
 }
-function closeResults(){
-  document.documentElement.classList.remove("locked");
-  if(typeof dlg.close === "function") dlg.close();
-  else dlg.removeAttribute("open");
+function closePop(d){
+  if(typeof d.close === "function") d.close();
+  else d.removeAttribute("open");
+  releaseLock();
 }
-document.getElementById("resClose").onclick = closeResults;
-/* Esc and backdrop dismissal go through the dialog's own close event, so the
-   scroll lock is released no matter how the sheet was dismissed. */
-dlg.addEventListener("close", ()=>document.documentElement.classList.remove("locked"));
-/* A click on the backdrop reports the dialog as its target — but so does a
-   click on the dialog's own padding, so compare against the box instead. */
-dlg.addEventListener("click", e=>{
-  if(e.target !== dlg) return;
-  const r = dlg.getBoundingClientRect();
-  const inside = e.clientX >= r.left && e.clientX <= r.right &&
-                 e.clientY >= r.top  && e.clientY <= r.bottom;
-  if(!inside) closeResults();
-});
+function wirePop(d, closer){
+  if(closer) closer.onclick = ()=>closePop(d);
+  /* Esc and backdrop dismissal go through the dialog's own close event, so the
+     scroll lock is released no matter how the sheet was dismissed. */
+  d.addEventListener("close", releaseLock);
+  /* A click on the backdrop reports the dialog as its target — but so does a
+     click on the dialog's own padding, so compare against the box instead. */
+  d.addEventListener("click", e=>{
+    if(e.target !== d) return;
+    const r = d.getBoundingClientRect();
+    const inside = e.clientX >= r.left && e.clientX <= r.right &&
+                   e.clientY >= r.top  && e.clientY <= r.bottom;
+    if(!inside) closePop(d);
+  });
+}
+
+const dlg = document.getElementById("results");
+wirePop(dlg, document.getElementById("resClose"));
+const openResults = ()=>openPop(dlg);
+
+/* Welcome sheet: first visit only, so a daily player is not greeted every
+   morning. "How to play" reopens it. Storage can throw (private browsing,
+   blocked cookies) — treat any failure as "not seen yet" and still explain
+   the game rather than swallowing the intro. */
+const welcome = document.getElementById("welcome");
+const SEEN = "cah.welcomed";
+wirePop(welcome, document.getElementById("welClose"));
+document.getElementById("welGo").onclick = ()=>closePop(welcome);
+document.getElementById("howto").onclick = ()=>openPop(welcome);
+function seenWelcome(){
+  try{ return localStorage.getItem(SEEN) === "1"; }catch(e){ return false; }
+}
+function markWelcome(){
+  try{ localStorage.setItem(SEEN, "1"); }catch(e){}
+}
+if(!seenWelcome()){ openPop(welcome); markWelcome(); }
 
 function finish(){
   done = true;
