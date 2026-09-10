@@ -14,6 +14,24 @@ const W = rd('water.json');
 const FACTS = rd('facts.json');
 const webp = fs.readFileSync(path.join(DATA, 'relief.webp'));
 
+/* Optional page backdrop: drop a backdrop.* into tools/data and it gets
+   inlined. Absent, the rule is omitted entirely and the page is unchanged. */
+const BACKDROP_OPACITY = 0.07;
+const backdropFile = ['backdrop.webp','backdrop.jpg','backdrop.jpeg','backdrop.png']
+  .map(f => path.join(DATA, f)).find(fs.existsSync);
+let backdropCss = '';
+if (backdropFile) {
+  const ext = path.extname(backdropFile).slice(1).replace('jpg','jpeg');
+  const uri = 'data:image/' + ext + ';base64,' + fs.readFileSync(backdropFile).toString('base64');
+  backdropCss =
+`/* faint page backdrop; the map and panels paint over it opaquely */
+body::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:url(${uri}) center center / cover no-repeat;
+  opacity:${BACKDROP_OPACITY};
+}`;
+}
+
 const SVG_W = C.svg_w, SVG_H = C.svg_h;
 const K = SVG_W / frame.px_w;
 const FRAME = { k:+K.toFixed(10), ox:frame.org_x, oy:frame.org_y, world:Math.pow(2,frame.z)*256 };
@@ -49,6 +67,7 @@ const subs = {
   __CENT__: JSON.stringify(CO),
   __FRAME__: JSON.stringify(FRAME),
   __FACTS__: JSON.stringify(FACTS),
+  __BACKDROP_CSS__: backdropCss,
 };
 
 /* every county must carry a fact, or the reveal falls flat for that round */
@@ -64,3 +83,6 @@ fs.writeFileSync(OUT, html);
 console.log(`wrote ${OUT}  ${(fs.statSync(OUT).size/1024).toFixed(0)} KB`);
 console.log(`  ${NAMES.length} counties, ${W.rivers.length} river segs, ${W.lakes.length} lakes, ${W.urban.length} urban`);
 console.log(`  relief ${(webp.length/1024).toFixed(0)} KB webp -> ${(webp.length*4/3/1024).toFixed(0)} KB base64`);
+console.log(backdropFile
+  ? `  backdrop ${path.basename(backdropFile)} ${(fs.statSync(backdropFile).size/1024).toFixed(0)} KB at ${BACKDROP_OPACITY} opacity`
+  : '  backdrop none (add tools/data/backdrop.jpg to enable)');
