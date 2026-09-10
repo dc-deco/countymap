@@ -690,22 +690,13 @@ const dlg = document.getElementById("results");
 wirePop(dlg, document.getElementById("resClose"));
 const openResults = ()=>openPop(dlg);
 
-/* Welcome sheet: first visit only, so a daily player is not greeted every
-   morning. "How to play" reopens it. Storage can throw (private browsing,
-   blocked cookies) — treat any failure as "not seen yet" and still explain
-   the game rather than swallowing the intro. */
+/* Welcome sheet, shown on every load. "How to play" reopens it after it is
+   dismissed. */
 const welcome = document.getElementById("welcome");
-const SEEN = "cah.welcomed";
 wirePop(welcome, document.getElementById("welClose"));
 document.getElementById("welGo").onclick = ()=>closePop(welcome);
 document.getElementById("howto").onclick = ()=>openPop(welcome);
-function seenWelcome(){
-  try{ return localStorage.getItem(SEEN) === "1"; }catch(e){ return false; }
-}
-function markWelcome(){
-  try{ localStorage.setItem(SEEN, "1"); }catch(e){}
-}
-if(!seenWelcome()){ openPop(welcome); markWelcome(); }
+openPop(welcome);
 
 function finish(){
   done = true;
