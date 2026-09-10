@@ -466,8 +466,8 @@ function emoji(s){ return s>=95?"\u{1F3AF}":s>=85?"\u{1F389}":s>=70?"\u{1F525}":
 const ENDINGS = [
   [800, "You're county as hell"],
   [550, "You know your backroads"],
-  [200, "You ain't from around here"],
-  [0,   "Not so fast, city boy"],
+  [200, "Not so fast, city boy"],
+  [0,   "You ain't from around here"],
 ];
 function endingFor(total){
   for(const [floor, line] of ENDINGS) if(total >= floor) return line;
