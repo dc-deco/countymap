@@ -507,7 +507,7 @@ function finish(){
   readout.innerHTML = "";
   factBox.hidden = true;
   drawTape();
-  const share = `120.gg ${iso}\n` + scores.map(s=>`${s}${emoji(s)}`).join(" ") + `\nFinal score: ${total}`;
+  const share = `countyashell.com ${iso}\n` + scores.map(s=>`${s}${emoji(s)}`).join(" ") + `\nFinal score: ${total}`;
   document.getElementById("final").innerHTML =
     `<div class="final"><div class="big">${total}<span class="of"> / 1000</span></div>
      <pre id="share">${share}</pre>
