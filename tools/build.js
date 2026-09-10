@@ -11,6 +11,7 @@ const rd = f => JSON.parse(fs.readFileSync(path.join(DATA, f), 'utf8'));
 const frame = rd('frame.json');
 const C = rd('counties.json');
 const W = rd('water.json');
+const FACTS = rd('facts.json');
 const webp = fs.readFileSync(path.join(DATA, 'relief.webp'));
 
 const SVG_W = C.svg_w, SVG_H = C.svg_h;
@@ -47,7 +48,14 @@ const subs = {
   __NAMES__: JSON.stringify(NAMES),
   __CENT__: JSON.stringify(CO),
   __FRAME__: JSON.stringify(FRAME),
+  __FACTS__: JSON.stringify(FACTS),
 };
+
+/* every county must carry a fact, or the reveal falls flat for that round */
+const noFact = NAMES.filter(n => !FACTS[n] || !String(FACTS[n]).trim());
+if (noFact.length) { console.error('counties missing a fact:', noFact); process.exit(1); }
+const orphan = Object.keys(FACTS).filter(n => !CO[n]);
+if (orphan.length) { console.error('facts with no matching county:', orphan); process.exit(1); }
 for (const [k, v] of Object.entries(subs)) html = html.split(k).join(v);
 
 const left = html.match(/__[A-Z_]+__/g);

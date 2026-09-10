@@ -55,9 +55,16 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
 .primary:active{background:#2F3B35}
 .primary:disabled{background:var(--shell);color:var(--line-2);border-color:var(--line)}
 
-.readout{margin-top:12px;min-height:52px;font-size:15px}
+.readout{margin-top:12px;min-height:23px;font-size:15px}
 .readout b{font-weight:600}
 .readout .miles{color:var(--ink-2)}
+.fact{
+  margin-top:10px;padding:11px 13px;
+  background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--grass);
+  font-size:14px;line-height:1.5;color:var(--ink);
+}
+.fact .lede{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-2);margin-bottom:3px}
 .hint{font-size:13px;color:var(--ink-2);margin-top:10px}
 .credits{font-size:11px;line-height:1.45;color:var(--line-2);margin-top:18px;border-top:1px solid var(--line);padding-top:8px}
 
@@ -121,6 +128,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
 <button id="lock" class="primary" disabled>Lock it in</button>
 
 <div class="readout" id="readout"></div>
+<div class="fact" id="fact" hidden><span class="lede" id="factLede"></span><span id="factText"></span></div>
 <p class="hint">Drag to pan, pinch or scroll to zoom. Tap to drop a pin, then lock it in.</p>
 
 <div class="tape" id="tape"></div>
@@ -133,6 +141,7 @@ boundaries from the US Census Bureau via us-atlas. Rivers, lakes and urban areas
 <script>
 const NAMES = __NAMES__;
 const CO = __CENT__;
+const FACTS = __FACTS__;
 const MULT = [1,1,2,3,3];
 
 const EASY = ["Jefferson","Fayette","Kenton","Boone","Warren","Daviess","Hardin","Campbell","Christian","McCracken","Madison","Boyd","Pike","Laurel","Pulaski","Franklin"];
@@ -179,6 +188,19 @@ const link = document.getElementById("link");
 const lockBtn = document.getElementById("lock");
 const readout = document.getElementById("readout");
 const tape = document.getElementById("tape");
+const factBox = document.getElementById("fact");
+const factLede = document.getElementById("factLede");
+const factText = document.getElementById("factText");
+
+/* Facts are set as text, never markup, so an apostrophe or a stray angle
+   bracket in the copy can never break the page. */
+function showFact(name){
+  const f = FACTS[name];
+  if(!f){ factBox.hidden = true; return; }
+  factLede.textContent = name + " County";
+  factText.textContent = f;
+  factBox.hidden = false;
+}
 
 const FULL = {x:0, y:0, w:__SVG_W__, h:__SVG_H__};
 const MAX_ZOOM = 7;
@@ -320,6 +342,7 @@ function startRound(){
   lockBtn.disabled = true;
   lockBtn.onclick = lockIn;
   readout.innerHTML = "";
+  factBox.hidden = true;
   setView({...FULL});
   drawTape();
 }
@@ -343,6 +366,7 @@ function lockIn(){
     ? `<b>${s} points.</b> Dead on &mdash; you tapped inside ${name}.`
     : `<b>${s} points.</b> <span class="miles">${mi<10?mi.toFixed(1):Math.round(mi)} miles off${guess.county?`, you landed in ${guess.county}`:""}.</span>`;
 
+  showFact(name);
   drawTape();
   lockBtn.disabled = false;
   lockBtn.textContent = round<4 ? "Next county" : "See your score";
@@ -358,6 +382,7 @@ function finish(){
   document.getElementById("target").innerHTML = `That's the run<small>${iso}</small>`;
   lockBtn.style.display = "none";
   readout.innerHTML = "";
+  factBox.hidden = true;
   drawTape();
   const share = `120.gg ${iso}\n` + scores.map(s=>`${s}${emoji(s)}`).join(" ") + `\nFinal score: ${total}`;
   document.getElementById("final").innerHTML =

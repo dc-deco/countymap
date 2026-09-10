@@ -16,6 +16,11 @@ node tools/build.js          # tools/data/* + tools/template.html -> index.html
 Edit `tools/template.html` for any markup, CSS or game-logic change, then
 rebuild. Do not hand-edit `index.html` — it is generated and will be overwritten.
 
+To fix or reword a county fun fact, edit `tools/data/facts.json` (a plain
+name -> sentence map) and rebuild. The build fails if any of the 120 counties
+is missing a fact, or if a fact names a county that does not exist. Facts are
+rendered as text, never markup, so quotes and punctuation are safe.
+
 ## Regenerating the map data
 
 Needs network plus `npm install` in `tools/` and `pip install numpy Pillow`.
@@ -29,6 +34,9 @@ Run from a scratch directory; each step writes into it.
 | 4 | `relief.py` | `relief_*.webp` + `frame.json` — hillshade & tint |
 | 5 | `geom.js` | `counties.json` — projected county paths, interior points, lon/lat |
 | 6 | `water.js` | `water.json` — rivers, lakes, urban areas |
+
+`facts.json` is hand-maintained, not generated — it is not part of this
+pipeline and survives a full map rebuild.
 
 Copy `frame.json`, `counties.json`, `water.json` and the chosen
 `relief_*.webp` (as `relief.webp`) into `tools/data/`, then run `build.js`.
