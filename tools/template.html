@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="intro">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -109,6 +109,17 @@ dialog.pop .sheet{flex:1 1 auto;min-height:0;overflow-y:auto;
 dialog.pop::backdrop{background:rgba(22,30,26,.55)}
 dialog.pop:not(:modal){position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60}
 html.locked,html.locked body{overflow:hidden}
+/* While the welcome sheet is up the page behind it is just the landscape:
+   the game is hidden and the backdrop comes to full strength, then settles
+   back to its usual whisper once the sheet is dismissed. The class ships in
+   the markup so the board never flashes before the script runs. */
+html.intro .wrap{opacity:0;visibility:hidden}
+html.intro body::before{opacity:1}
+#welcome::backdrop{background:rgba(22,30,26,.34)}
+@media (prefers-reduced-motion:no-preference){
+  .wrap{transition:opacity .28s ease}
+  body::before{transition:opacity .45s ease}
+}
 dialog.pop .x{
   position:absolute;top:8px;right:8px;z-index:2;width:36px;height:36px;padding:0;
   font-size:22px;line-height:1;border-color:var(--line);background:var(--panel);
@@ -538,7 +549,7 @@ function openPop(d){
 }
 function closePop(d){
   if(typeof d.close === "function") d.close();
-  else d.removeAttribute("open");
+  else { d.removeAttribute("open"); d.dispatchEvent(new Event("close")); }
   releaseLock();
 }
 function wirePop(d, closer){
@@ -562,11 +573,16 @@ wirePop(dlg, document.getElementById("resClose"));
 const openResults = ()=>openPop(dlg);
 
 /* Welcome sheet, shown on every load. "How to play" reopens it after it is
-   dismissed. */
+   dismissed. Every dismissal — button, X, Esc, backdrop — arrives as the
+   dialog's close event, so the game is revealed exactly once per path. */
 const welcome = document.getElementById("welcome");
 wirePop(welcome, document.getElementById("welClose"));
+welcome.addEventListener("close", ()=>document.documentElement.classList.remove("intro"));
 document.getElementById("welGo").onclick = ()=>closePop(welcome);
-document.getElementById("howto").onclick = ()=>openPop(welcome);
+document.getElementById("howto").onclick = ()=>{
+  document.documentElement.classList.add("intro");
+  openPop(welcome);
+};
 openPop(welcome);
 
 function finish(){
