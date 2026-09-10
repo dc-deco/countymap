@@ -514,9 +514,10 @@ function finish(){
   document.getElementById("final").innerHTML =
     `<div class="final"><div class="big">${total}<span class="of"> / 1000</span></div>
      <pre id="share">${share}</pre>
-     <button id="copy" style="width:100%">Copy result</button></div>`;
+     <button id="copy" class="primary" style="width:100%">Share your score</button></div>`;
   document.getElementById("copy").onclick = async ()=>{
-    try{ await navigator.clipboard.writeText(share); document.getElementById("copy").textContent="Copied"; }
+    /* the label promises sharing, so say plainly where the result went */
+    try{ await navigator.clipboard.writeText(share); document.getElementById("copy").textContent="Copied to clipboard"; }
     catch(e){ document.getElementById("copy").textContent="Select the text above to copy"; }
   };
 }
