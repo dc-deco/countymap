@@ -52,8 +52,8 @@ button:disabled{color:var(--line-2);cursor:default}
 button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
 
 .controls{display:flex;gap:8px;margin-top:10px}
-.controls #reset{flex:1}
-.zbtn{flex:0 0 54px;font-size:19px;padding:11px 0;line-height:1}
+.zbtn{flex:1;padding:11px 0;line-height:1}
+.zbtn .g{font-size:18px;vertical-align:-1px;margin-right:5px}
 #lock{width:100%;margin-top:8px}
 .primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .primary:active{background:#2F3B35}
@@ -71,7 +71,9 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
   color:var(--ink-2);margin-bottom:3px}
 .hint{font-size:13px;color:var(--ink-2);margin-top:10px}
 .byline{font-size:13px;color:var(--ink-2);margin:18px 0 0;border-top:1px solid var(--line);padding-top:12px}
-.byline b{color:var(--ink);font-weight:600}
+.byline a{color:var(--ink);font-weight:600;text-decoration:underline;
+  text-underline-offset:2px;text-decoration-color:var(--line-2)}
+.byline a:hover,.byline a:focus-visible{text-decoration-color:var(--ink)}
 .credits{font-size:11px;line-height:1.45;color:var(--line-2);margin-top:8px}
 
 .tape{display:flex;gap:4px;margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
@@ -249,9 +251,8 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
 </div>
 
 <div class="controls">
-  <button id="zout" class="zbtn" aria-label="Zoom out">&minus;</button>
-  <button id="zin" class="zbtn" aria-label="Zoom in">+</button>
-  <button id="reset">Fit state</button>
+  <button id="zout" class="zbtn"><span class="g">&minus;</span>Zoom out</button>
+  <button id="zin" class="zbtn"><span class="g">+</span>Zoom in</button>
 </div>
 <button id="lock" class="primary" disabled>Lock it in</button>
 
@@ -262,7 +263,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
 <div class="tape" id="tape"></div>
 <div id="final"></div>
 
-<p class="byline">A Kentucky map game by <b>Dan DeCoste</b></p>
+<p class="byline">A Kentucky map game by <a href="https://dandecoste.com" target="_blank" rel="noopener noreferrer">Dan DeCoste</a></p>
 <p class="credits">Shaded relief built from Mapzen / AWS Terrain Tiles (USGS NED, SRTM). County and state
 boundaries from the US Census Bureau via us-atlas. Rivers, lakes and urban areas from Natural Earth.</p>
 </div>
@@ -369,7 +370,6 @@ function zoomAt(f, fx, fy){
 function zoomBy(f){ zoomAt(f, .5, .5); }
 document.getElementById("zin").onclick = ()=>zoomBy(1.8);
 document.getElementById("zout").onclick = ()=>zoomBy(1/1.8);
-document.getElementById("reset").onclick = ()=>setView({...FULL});
 
 function toSvg(cx, cy){
   const p = svg.createSVGPoint(); p.x = cx; p.y = cy;
