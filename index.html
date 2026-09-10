@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>120 &middot; a Kentucky county game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E7EBE8; --panel:#F4F6F4; --ink:#1B2420; --ink-2:#5C6963;
+  --line:#A9B5AF; --line-2:#7C8A84;
+  --grass:#43703C; --grass-soft:#C6D6BE;
+  --madder:#9B3B26;
+  --shell:#D9DFDB;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:Archivo,system-ui,-apple-system,sans-serif;
+  font-size:16px; line-height:1.5;
+  display:flex; justify-content:center;
+  padding:16px 12px 40px;
+}
+.wrap{width:100%;max-width:460px}
+header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+h1{font-size:15px;font-weight:600;letter-spacing:.14em;margin:0}
+h1 span{color:var(--ink-2);font-weight:400;letter-spacing:.02em}
+.date{font-size:13px;color:var(--ink-2)}
+
+.prompt{margin:0 0 10px}
+.step{font-size:12px;letter-spacing:.12em;color:var(--ink-2);margin:0 0 2px}
+.target{font-size:38px;line-height:1.05;font-weight:600;margin:0;letter-spacing:-.02em}
+.target small{font-size:15px;font-weight:400;color:var(--ink-2);letter-spacing:0;display:block;margin-top:2px}
+
+.mapbox{position:relative;background:var(--panel);border:1px solid var(--line-2);overflow:hidden;touch-action:none}
+svg{display:block;width:100%;height:290px;cursor:crosshair}
+#pin,#truth,#link{pointer-events:none}
+#counties path{fill:var(--shell);stroke:var(--line);stroke-width:.8;vector-effect:non-scaling-stroke}
+#counties path.hit{fill:var(--grass-soft);stroke:var(--grass);stroke-width:1.6}
+.zoom{position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;gap:6px}
+.zoom button{width:38px;height:38px;font-size:19px;padding:0}
+button{
+  font-family:inherit;font-size:15px;background:var(--panel);color:var(--ink);
+  border:1px solid var(--line-2);padding:11px 16px;cursor:pointer;
+}
+button:active{background:var(--shell)}
+button:disabled{color:var(--line-2);cursor:default}
+button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
+
+.controls{display:flex;gap:8px;margin-top:10px}
+.controls button{flex:1}
+.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.primary:active{background:#2F3B35}
+.primary:disabled{background:var(--shell);color:var(--line-2);border-color:var(--line)}
+
+.readout{margin-top:12px;min-height:52px;font-size:15px}
+.readout b{font-weight:600}
+.readout .miles{color:var(--ink-2)}
+.hint{font-size:13px;color:var(--ink-2);margin-top:10px}
+
+.tape{display:flex;gap:4px;margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+.cell{flex:1;text-align:center;padding:6px 2px;border:1px solid var(--line)}
+.cell .n{font-size:11px;color:var(--ink-2);letter-spacing:.08em}
+.cell .v{font-size:19px;font-weight:600}
+.cell.pending .v{color:var(--line-2)}
+.cell.now{border-color:var(--ink);border-width:2px}
+
+.final{margin-top:20px;border-top:2px solid var(--ink);padding-top:14px}
+.final .big{font-size:46px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.final .of{font-size:16px;color:var(--ink-2);font-weight:400}
+pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid var(--line);padding:12px;white-space:pre-wrap;margin:12px 0}
+@media (prefers-reduced-motion:no-preference){
+  #pin,#truth,#link{transition:opacity .18s ease}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>120 <span>&mdash; kentucky counties</span></h1>
+  <div class="date" id="date"></div>
+</header>
+
+<div class="prompt">
+  <p class="step" id="step">Round 1 of 5</p>
+  <h2 class="target" id="target">&nbsp;<small id="sub">Tap where you think it is</small></h2>
+</div>
+
+<div class="mapbox">
+  <svg id="map" viewBox="0 -100 1000 634" role="application" aria-label="Map of Kentucky counties">
+    <g id="counties">
+<path d="M583 303L597 312L599 324L578 355L574 367L545 365L535 337L554 327L563 315L583 303Z" data-n="Adair" data-x="571.1" data-y="330.7"/>
+<path d="M476 416L418 412L419 391L451 365L476 400L476 416Z" data-n="Allen" data-x="452.8" data-y="400.1"/>
+<path d="M584 206L582 194L600 168L621 170L630 194L611 197L600 207L584 206Z" data-n="Anderson" data-x="601.3" data-y="193.0"/>
+<path d="M65 356L55 345L55 336L74 314L82 310L88 310L102 356L79 361L65 356Z" data-n="Ballard" data-x="73.9" data-y="338.0"/>
+<path d="M458 345L463 346L466 327L485 330L507 327L507 381L476 400L451 365L458 345Z" data-n="Barren" data-x="474.6" data-y="351.7"/>
+<path d="M771 185L765 188L748 165L735 156L752 138L768 139L778 159L780 156L798 178L788 185L771 185Z" data-n="Bath" data-x="768.5" data-y="166.7"/>
+<path d="M809 406L800 406L779 420L747 420L743 411L753 404L764 387L792 367L790 359L801 361L804 366L801 383L809 406Z" data-n="Bell" data-x="783.9" data-y="392.1"/>
+<path d="M649 11L654 44L652 57L646 61L629 48L630 44L615 15L635 0L649 11Z" data-n="Boone" data-x="639.7" data-y="32.4"/>
+<path d="M707 127L717 143L735 156L722 169L696 177L683 170L675 142L688 141L707 127Z" data-n="Bourbon" data-x="703.4" data-y="150.2"/>
+<path d="M904 100L913 113L916 141L888 144L891 124L885 122L904 100Z" data-n="Boyd" data-x="900.1" data-y="120.5"/>
+<path d="M648 249L624 264L599 264L600 242L637 236L648 249Z" data-n="Boyle" data-x="626.2" data-y="250.9"/>
+<path d="M725 61L736 58L743 61L732 90L704 97L701 52L704 56L725 61Z" data-n="Bracken" data-x="721.4" data-y="66.9"/>
+<path d="M850 283L838 277L816 295L807 289L795 296L790 268L797 246L810 237L832 240L847 250L853 246L872 266L857 263L848 275L850 283Z" data-n="Breathitt" data-x="830.7" data-y="267.5"/>
+<path d="M396 261L385 223L388 215L395 213L405 195L406 183L410 182L454 223L437 257L428 262L408 252L396 261Z" data-n="Breckinridge" data-x="408.9" data-y="227.2"/>
+<path d="M522 177L531 178L548 170L540 191L519 218L508 221L494 210L492 199L481 190L494 181L511 175L522 177Z" data-n="Bullitt" data-x="513.5" data-y="190.6"/>
+<path d="M392 290L409 295L421 326L392 324L384 354L349 342L356 339L355 319L366 300L374 304L392 290Z" data-n="Butler" data-x="380.9" data-y="316.6"/>
+<path d="M237 289L231 298L236 312L252 327L248 348L226 358L205 322L198 321L199 314L237 289Z" data-n="Caldwell" data-x="227.0" data-y="318.0"/>
+<path d="M199 404L204 427L201 434L143 432L145 391L194 392L199 404Z" data-n="Calloway" data-x="183.5" data-y="411.8"/>
+<path d="M665 8L674 8L688 19L701 44L677 56L671 48L672 25L665 8Z" data-n="Campbell" data-x="676.7" data-y="27.1"/>
+<path d="M65 356L79 361L102 356L102 385L61 382L53 377L65 356Z" data-n="Carlisle" data-x="75.2" data-y="367.5"/>
+<path d="M593 91L581 93L560 68L569 68L580 76L599 64L611 80L593 91Z" data-n="Carroll" data-x="585.7" data-y="78.9"/>
+<path d="M817 133L832 130L830 115L839 102L854 108L864 119L891 124L888 144L872 155L855 154L841 142L830 154L822 149L817 133Z" data-n="Carter" data-x="846.7" data-y="132.9"/>
+<path d="M599 324L597 312L583 303L594 286L599 264L624 264L624 284L640 295L641 315L617 335L611 337L599 324Z" data-n="Casey" data-x="610.6" data-y="303.5"/>
+<path d="M295 412L249 412L254 358L245 352L252 327L273 335L298 327L307 341L295 412Z" data-n="Christian" data-x="274.3" data-y="364.0"/>
+<path d="M690 206L696 177L722 169L738 199L733 214L690 206Z" data-n="Clark" data-x="711.4" data-y="195.4"/>
+<path d="M800 312L795 324L801 361L753 343L740 324L743 311L763 294L780 293L800 312Z" data-n="Clay" data-x="775.1" data-y="319.4"/>
+<path d="M608 418L566 416L576 378L589 383L596 378L604 394L608 418Z" data-n="Clinton" data-x="592.8" data-y="397.9"/>
+<path d="M237 289L199 314L198 321L185 326L182 305L164 283L175 276L201 273L210 261L220 272L224 286L237 289Z" data-n="Crittenden" data-x="202.8" data-y="291.3"/>
+<path d="M545 365L574 367L569 371L576 378L566 416L547 418L526 385L545 365Z" data-n="Cumberland" data-x="556.2" data-y="383.1"/>
+<path d="M290 240L308 224L301 218L304 205L329 224L334 221L338 205L346 200L362 215L367 243L349 250L338 261L290 240Z" data-n="Daviess" data-x="327.3" data-y="226.7"/>
+<path d="M412 301L453 299L467 319L463 346L444 337L436 341L421 326L412 301Z" data-n="Edmonson" data-x="438.4" data-y="321.5"/>
+<path d="M872 155L877 166L860 183L838 184L828 167L830 154L841 142L855 154L872 155Z" data-n="Elliott" data-x="852.6" data-y="162.1"/>
+<path d="M747 263L739 257L723 259L723 212L733 214L746 227L770 234L757 243L747 263Z" data-n="Estill" data-x="742.9" data-y="241.3"/>
+<path d="M681 154L683 170L696 177L690 206L677 214L671 199L647 188L652 168L681 154Z" data-n="Fayette" data-x="675.3" data-y="181.2"/>
+<path d="M778 159L768 139L752 138L734 115L741 106L750 112L778 100L786 116L803 123L796 142L778 159Z" data-n="Fleming" data-x="769.5" data-y="128.1"/>
+<path d="M875 269L881 260L872 231L895 224L921 235L915 265L920 271L909 297L904 301L899 298L896 278L875 269Z" data-n="Floyd" data-x="897.0" data-y="266.4"/>
+<path d="M636 131L639 157L621 170L600 168L603 134L636 131Z" data-n="Franklin" data-x="622.6" data-y="148.6"/>
+<path d="M4 427L1 416L4 414L12 415L13 425L4 427ZM97 430L20 428L28 407L33 406L40 417L44 417L53 404L72 414L89 417L97 430Z" data-n="Fulton" data-x="57.3" data-y="417.0"/>
+<path d="M646 61L630 63L630 70L611 80L599 64L626 58L629 48L646 61Z" data-n="Gallatin" data-x="627.2" data-y="63.1"/>
+<path d="M640 220L646 218L660 234L665 227L689 264L686 275L676 273L637 236L643 235L640 220Z" data-n="Garrard" data-x="658.3" data-y="240.2"/>
+<path d="M652 57L662 58L670 99L657 111L632 87L630 70L630 63L646 61L652 57Z" data-n="Grant" data-x="647.8" data-y="73.7"/>
+<path d="M143 432L100 430L103 357L146 359L143 432Z" data-n="Graves" data-x="126.8" data-y="401.8"/>
+<path d="M393 289L386 264L408 252L428 262L437 257L458 261L471 290L464 292L465 297L412 301L409 295L393 289Z" data-n="Grayson" data-x="427.0" data-y="279.0"/>
+<path d="M518 285L528 277L528 283L542 295L558 323L554 327L535 337L521 334L514 325L513 305L518 285Z" data-n="Green" data-x="529.9" data-y="306.9"/>
+<path d="M856 65L875 60L881 87L896 92L904 100L885 122L864 119L854 108L839 102L851 87L856 65Z" data-n="Greenup" data-x="869.0" data-y="91.6"/>
+<path d="M366 232L362 215L346 200L354 199L368 189L378 207L388 212L385 223L390 245L366 232Z" data-n="Hancock" data-x="370.3" data-y="215.5"/>
+<path d="M467 280L458 261L437 257L454 223L472 220L477 210L474 190L480 189L492 199L494 210L508 221L515 234L489 265L487 282L467 280Z" data-n="Hardin" data-x="478.1" data-y="234.7"/>
+<path d="M885 353L886 361L880 370L859 374L851 392L809 406L801 383L804 368L834 355L844 347L852 350L848 357L876 347L885 353Z" data-n="Harlan" data-x="851.0" data-y="365.4"/>
+<path d="M675 142L675 135L660 108L670 99L705 92L704 97L711 97L708 106L719 112L707 127L688 141L675 142Z" data-n="Harrison" data-x="691.3" data-y="116.6"/>
+<path d="M467 280L518 285L513 305L514 325L485 330L466 327L467 319L453 299L465 297L464 292L471 290L467 280Z" data-n="Hart" data-x="479.0" data-y="302.5"/>
+<path d="M254 203L257 206L255 214L259 216L267 210L262 199L265 192L277 203L285 197L294 199L304 205L301 218L308 224L288 242L278 246L247 247L245 232L237 226L223 203L229 199L235 207L240 207L254 203Z" data-n="Henderson" data-x="263.7" data-y="213.0"/>
+<path d="M620 130L603 134L566 131L558 114L581 93L593 91L606 105L607 117L618 121L620 130Z" data-n="Henry" data-x="597.2" data-y="116.7"/>
+<path d="M100 430L89 417L72 414L53 404L50 391L52 387L60 388L61 382L102 385L100 430Z" data-n="Hickman" data-x="73.7" data-y="402.9"/>
+<path d="M252 327L236 312L231 298L265 276L277 272L294 259L296 283L304 288L291 310L298 327L273 335L252 327Z" data-n="Hopkins" data-x="272.4" data-y="301.3"/>
+<path d="M763 294L743 311L717 300L709 267L723 259L739 257L749 265L763 294Z" data-n="Jackson" data-x="738.2" data-y="281.0"/>
+<path d="M522 177L511 175L480 189L486 176L485 163L496 144L502 142L507 146L515 141L520 127L551 146L548 170L531 178L522 177Z" data-n="Jefferson" data-x="512.5" data-y="160.8"/>
+<path d="M640 220L647 188L671 199L677 214L660 234L646 218L640 220Z" data-n="Jessamine" data-x="654.5" data-y="213.0"/>
+<path d="M872 231L863 208L865 190L870 184L914 203L907 208L911 229L895 224L872 231Z" data-n="Johnson" data-x="885.4" data-y="212.0"/>
+<path d="M665 9L672 25L671 48L677 56L654 59L650 12L665 9Z" data-n="Kenton" data-x="664.8" data-y="30.9"/>
+<path d="M902 304L890 304L870 321L850 306L848 275L857 263L872 266L896 278L899 298L904 301L902 304Z" data-n="Knott" data-x="880.9" data-y="292.6"/>
+<path d="M790 359L792 367L764 387L753 404L743 397L728 377L724 360L742 356L753 343L790 359Z" data-n="Knox" data-x="757.9" data-y="370.9"/>
+<path d="M536 263L543 278L528 277L518 285L487 282L489 265L515 234L527 240L522 264L536 263Z" data-n="Larue" data-x="520.1" data-y="265.2"/>
+<path d="M753 343L742 356L688 362L702 314L717 300L743 311L740 324L753 343Z" data-n="Laurel" data-x="729.7" data-y="331.7"/>
+<path d="M929 191L918 191L914 203L870 184L865 190L860 183L877 166L872 155L888 144L913 142L909 160L925 181L932 185L929 191Z" data-n="Lawrence" data-x="900.0" data-y="176.3"/>
+<path d="M790 268L783 263L757 272L747 263L757 243L772 233L797 246L790 268Z" data-n="Lee" data-x="774.0" data-y="256.9"/>
+<path d="M800 312L806 303L820 302L824 313L841 321L844 347L834 355L804 368L795 324L800 312Z" data-n="Leslie" data-x="816.7" data-y="325.8"/>
+<path d="M924 315L904 331L904 341L885 353L876 347L848 357L852 350L861 346L860 329L867 317L870 321L890 304L902 304L924 315Z" data-n="Letcher" data-x="883.3" data-y="330.7"/>
+<path d="M777 81L779 75L793 71L812 77L824 86L842 82L856 65L851 87L830 115L832 130L817 133L786 116L778 100L777 81Z" data-n="Lewis" data-x="810.9" data-y="92.7"/>
+<path d="M650 306L641 315L640 295L624 284L624 264L648 249L676 273L669 299L662 295L650 306Z" data-n="Lincoln" data-x="648.6" data-y="288.6"/>
+<path d="M146 346L136 336L147 338L152 333L155 325L143 302L150 284L158 280L164 283L182 305L185 326L180 337L182 350L178 353L162 339L146 346Z" data-n="Livingston" data-x="160.4" data-y="324.0"/>
+<path d="M372 412L333 412L335 343L345 341L362 345L384 354L392 373L382 380L372 412Z" data-n="Logan" data-x="364.0" data-y="374.7"/>
+<path d="M198 321L205 322L226 358L189 372L178 353L182 350L180 337L185 326L198 321Z" data-n="Lyon" data-x="193.3" data-y="340.2"/>
+<path d="M689 264L665 227L677 214L690 206L723 212L723 259L709 267L689 264Z" data-n="Madison" data-x="695.6" data-y="239.3"/>
+<path d="M875 269L853 246L847 250L831 238L833 235L829 224L849 207L863 208L881 260L875 269Z" data-n="Magoffin" data-x="853.7" data-y="240.6"/>
+<path d="M594 286L582 278L572 285L560 277L543 278L536 263L551 234L555 244L570 251L600 250L594 286Z" data-n="Marion" data-x="568.8" data-y="266.6"/>
+<path d="M145 391L146 346L162 339L178 353L189 372L194 392L145 391Z" data-n="Marshall" data-x="165.5" data-y="369.2"/>
+<path d="M929 191L953 221L936 237L911 229L907 208L914 203L918 191L929 191Z" data-n="Martin" data-x="924.3" data-y="208.9"/>
+<path d="M769 82L777 82L778 100L750 112L741 106L732 90L743 61L750 63L761 79L769 82Z" data-n="Mason" data-x="756.9" data-y="85.7"/>
+<path d="M103 357L87 310L128 329L146 346L146 359L103 357Z" data-n="McCracken" data-x="118.7" data-y="342.9"/>
+<path d="M707 420L635 419L648 397L660 384L660 376L689 360L688 362L691 363L697 362L691 389L697 406L707 420Z" data-n="McCreary" data-x="680.9" data-y="388.4"/>
+<path d="M338 261L329 274L329 285L304 288L296 283L294 259L278 246L290 240L338 261Z" data-n="McLean" data-x="310.5" data-y="266.3"/>
+<path d="M454 223L410 182L415 181L422 172L433 166L438 168L438 179L445 185L474 190L477 210L472 220L454 223Z" data-n="Meade" data-x="444.2" data-y="191.6"/>
+<path d="M771 185L788 185L798 178L807 181L799 209L782 215L763 201L764 187L771 185Z" data-n="Menifee" data-x="782.5" data-y="191.8"/>
+<path d="M641 212L644 213L640 217L643 235L600 242L603 213L600 207L611 197L630 194L627 198L641 212Z" data-n="Mercer" data-x="625.5" data-y="212.8"/>
+<path d="M507 327L514 325L521 334L535 337L545 365L526 385L507 381L507 327Z" data-n="Metcalfe" data-x="520.4" data-y="347.4"/>
+<path d="M501 417L476 416L476 400L507 381L526 385L547 418L501 417Z" data-n="Monroe" data-x="504.9" data-y="404.8"/>
+<path d="M735 156L748 165L764 187L763 201L738 199L722 169L735 156Z" data-n="Montgomery" data-x="743.9" data-y="176.1"/>
+<path d="M860 183L865 190L863 208L849 207L829 224L830 233L799 209L807 181L828 167L838 184L860 183Z" data-n="Morgan" data-x="838.9" data-y="197.2"/>
+<path d="M329 285L355 319L356 339L309 346L291 310L304 288L329 285Z" data-n="Muhlenberg" data-x="324.6" data-y="310.3"/>
+<path d="M584 206L565 218L545 242L536 263L522 264L527 240L515 234L508 221L519 218L540 191L551 200L582 194L584 206Z" data-n="Nelson" data-x="544.3" data-y="222.9"/>
+<path d="M734 115L752 138L735 156L717 143L707 127L719 112L734 115Z" data-n="Nicholas" data-x="728.3" data-y="129.5"/>
+<path d="M392 290L374 304L366 300L355 319L329 285L329 274L349 250L367 243L366 232L390 245L396 261L386 264L392 290Z" data-n="Ohio" data-x="368.6" data-y="273.5"/>
+<path d="M542 143L520 127L524 117L547 103L562 109L558 114L566 131L561 139L542 143Z" data-n="Oldham" data-x="547.1" data-y="125.0"/>
+<path d="M636 131L620 130L618 121L607 117L606 105L593 91L630 70L632 87L657 111L636 131Z" data-n="Owen" data-x="623.5" data-y="109.5"/>
+<path d="M798 309L780 293L763 294L750 267L757 272L783 263L790 268L798 309Z" data-n="Owsley" data-x="777.3" data-y="284.2"/>
+<path d="M701 44L705 92L670 99L662 58L677 56L701 44Z" data-n="Pendleton" data-x="685.9" data-y="65.6"/>
+<path d="M852 350L844 347L841 321L824 313L820 302L806 303L800 312L795 296L807 289L816 295L838 277L850 283L850 306L867 317L860 329L861 346L852 350Z" data-n="Perry" data-x="834.2" data-y="313.8"/>
+<path d="M952 224L956 233L980 253L990 258L1000 256L952 303L924 315L902 304L909 297L920 271L915 265L921 235L936 237L952 224Z" data-n="Pike" data-x="943.4" data-y="262.4"/>
+<path d="M770 234L746 227L733 214L738 199L763 201L782 215L770 234Z" data-n="Powell" data-x="757.6" data-y="217.7"/>
+<path d="M641 315L662 295L669 299L698 328L689 360L660 376L647 357L635 361L617 346L617 335L641 315Z" data-n="Pulaski" data-x="652.5" data-y="335.2"/>
+<path d="M741 106L734 115L719 112L708 106L711 97L732 90L741 106Z" data-n="Robertson" data-x="726.5" data-y="104.7"/>
+<path d="M669 299L676 273L686 275L689 264L709 267L717 300L702 314L698 328L669 299Z" data-n="Rockcastle" data-x="690.7" data-y="291.2"/>
+<path d="M807 181L798 178L780 156L796 142L803 123L817 133L822 149L830 154L828 167L807 181Z" data-n="Rowan" data-x="808.8" data-y="156.2"/>
+<path d="M599 324L611 337L617 335L617 346L626 354L589 383L576 378L569 371L574 367L578 355L599 324Z" data-n="Russell" data-x="595.9" data-y="352.3"/>
+<path d="M639 157L636 131L660 108L675 135L681 154L652 170L639 157Z" data-n="Scott" data-x="654.4" data-y="144.5"/>
+<path d="M548 165L551 146L542 143L561 139L566 131L603 134L600 168L590 183L548 165Z" data-n="Shelby" data-x="567.8" data-y="152.8"/>
+<path d="M411 412L398 415L393 411L372 412L382 380L392 373L396 382L420 386L418 412L411 412Z" data-n="Simpson" data-x="399.4" data-y="399.5"/>
+<path d="M540 191L548 165L590 183L582 194L551 200L540 191Z" data-n="Spencer" data-x="558.5" data-y="187.6"/>
+<path d="M543 278L560 277L572 285L582 278L594 286L583 303L563 315L558 323L542 295L528 283L528 277L543 278Z" data-n="Taylor" data-x="557.8" data-y="289.9"/>
+<path d="M325 412L296 412L307 341L309 346L335 343L333 412L325 412Z" data-n="Todd" data-x="318.6" data-y="382.8"/>
+<path d="M249 412L228 412L228 407L199 404L189 372L245 352L254 358L249 412Z" data-n="Trigg" data-x="230.1" data-y="391.0"/>
+<path d="M581 93L562 109L547 103L549 97L544 73L548 69L560 68L581 93Z" data-n="Trimble" data-x="558.9" data-y="88.0"/>
+<path d="M195 256L193 239L205 229L209 219L220 223L225 218L221 207L223 203L237 226L245 232L247 247L220 272L210 261L204 268L195 256Z" data-n="Union" data-x="216.5" data-y="237.1"/>
+<path d="M421 326L436 341L444 337L458 345L451 365L419 391L420 386L396 382L384 354L392 324L421 326Z" data-n="Warren" data-x="422.0" data-y="352.6"/>
+<path d="M551 234L565 218L584 206L600 207L603 213L600 250L570 251L555 244L551 234Z" data-n="Washington" data-x="575.4" data-y="228.6"/>
+<path d="M634 419L608 418L604 394L596 378L626 354L635 361L647 357L660 376L660 384L648 397L634 419Z" data-n="Wayne" data-x="632.1" data-y="387.1"/>
+<path d="M236 294L237 289L224 286L220 272L247 247L278 246L294 259L277 272L265 276L236 294Z" data-n="Webster" data-x="251.4" data-y="273.5"/>
+<path d="M747 420L707 420L697 406L691 389L697 362L724 360L728 377L743 397L753 404L743 411L747 420Z" data-n="Whitley" data-x="725.2" data-y="397.1"/>
+<path d="M772 234L782 215L799 209L833 235L832 240L810 237L797 246L772 234Z" data-n="Wolfe" data-x="799.6" data-y="231.2"/>
+<path d="M652 170L641 212L627 198L630 194L621 170L639 157L652 170Z" data-n="Woodford" data-x="637.3" data-y="181.5"/>
+    </g>
+    <line id="link" x1="0" y1="0" x2="0" y2="0" stroke="#1B2420" stroke-width="1.4" stroke-dasharray="4 4" vector-effect="non-scaling-stroke" opacity="0"/>
+    <g id="truth" opacity="0">
+      <circle r="6" fill="none" stroke="#43703C" stroke-width="2.4" vector-effect="non-scaling-stroke"/>
+      <circle r="1.8" fill="#43703C"/>
+    </g>
+    <g id="pin" opacity="0">
+      <circle r="4.5" fill="#9B3B26"/>
+      <circle r="9" fill="none" stroke="#9B3B26" stroke-width="1.4" vector-effect="non-scaling-stroke"/>
+    </g>
+  </svg>
+  <div class="zoom">
+    <button id="zin" aria-label="Zoom in">+</button>
+    <button id="zout" aria-label="Zoom out">&minus;</button>
+  </div>
+</div>
+
+<div class="controls">
+  <button id="reset">Fit state</button>
+  <button id="lock" class="primary" disabled>Lock it in</button>
+</div>
+
+<div class="readout" id="readout"></div>
+<p class="hint">Drag to pan, pinch or use +/&minus; to zoom. Tap to drop a pin, then lock it in.</p>
+
+<div class="tape" id="tape"></div>
+<div id="final"></div>
+</div>
+
+<script>
+const NAMES = ["Adair", "Allen", "Anderson", "Ballard", "Barren", "Bath", "Bell", "Boone", "Bourbon", "Boyd", "Boyle", "Bracken", "Breathitt", "Breckinridge", "Bullitt", "Butler", "Caldwell", "Calloway", "Campbell", "Carlisle", "Carroll", "Carter", "Casey", "Christian", "Clark", "Clay", "Clinton", "Crittenden", "Cumberland", "Daviess", "Edmonson", "Elliott", "Estill", "Fayette", "Fleming", "Floyd", "Franklin", "Fulton", "Gallatin", "Garrard", "Grant", "Graves", "Grayson", "Green", "Greenup", "Hancock", "Hardin", "Harlan", "Harrison", "Hart", "Henderson", "Henry", "Hickman", "Hopkins", "Jackson", "Jefferson", "Jessamine", "Johnson", "Kenton", "Knott", "Knox", "Larue", "Laurel", "Lawrence", "Lee", "Leslie", "Letcher", "Lewis", "Lincoln", "Livingston", "Logan", "Lyon", "Madison", "Magoffin", "Marion", "Marshall", "Martin", "Mason", "McCracken", "McCreary", "McLean", "Meade", "Menifee", "Mercer", "Metcalfe", "Monroe", "Montgomery", "Morgan", "Muhlenberg", "Nelson", "Nicholas", "Ohio", "Oldham", "Owen", "Owsley", "Pendleton", "Perry", "Pike", "Powell", "Pulaski", "Robertson", "Rockcastle", "Rowan", "Russell", "Scott", "Shelby", "Simpson", "Spencer", "Taylor", "Todd", "Trigg", "Trimble", "Union", "Warren", "Washington", "Wayne", "Webster", "Whitley", "Wolfe", "Woodford"];
+const CENT = {"Adair":[571.1,330.7],"Allen":[452.8,400.1],"Anderson":[601.3,193.0],"Ballard":[73.9,338.0],"Barren":[474.6,351.7],"Bath":[768.5,166.7],"Bell":[783.9,392.1],"Boone":[639.7,32.4],"Bourbon":[703.4,150.2],"Boyd":[900.1,120.5],"Boyle":[626.2,250.9],"Bracken":[721.4,66.9],"Breathitt":[830.7,267.5],"Breckinridge":[408.9,227.2],"Bullitt":[513.5,190.6],"Butler":[380.9,316.6],"Caldwell":[227.0,318.0],"Calloway":[183.5,411.8],"Campbell":[676.7,27.1],"Carlisle":[75.2,367.5],"Carroll":[585.7,78.9],"Carter":[846.7,132.9],"Casey":[610.6,303.5],"Christian":[274.3,364.0],"Clark":[711.4,195.4],"Clay":[775.1,319.4],"Clinton":[592.8,397.9],"Crittenden":[202.8,291.3],"Cumberland":[556.2,383.1],"Daviess":[327.3,226.7],"Edmonson":[438.4,321.5],"Elliott":[852.6,162.1],"Estill":[742.9,241.3],"Fayette":[675.3,181.2],"Fleming":[769.5,128.1],"Floyd":[897.0,266.4],"Franklin":[622.6,148.6],"Fulton":[57.3,417.0],"Gallatin":[627.2,63.1],"Garrard":[658.3,240.2],"Grant":[647.8,73.7],"Graves":[126.8,401.8],"Grayson":[427.0,279.0],"Green":[529.9,306.9],"Greenup":[869.0,91.6],"Hancock":[370.3,215.5],"Hardin":[478.1,234.7],"Harlan":[851.0,365.4],"Harrison":[691.3,116.6],"Hart":[479.0,302.5],"Henderson":[263.7,213.0],"Henry":[597.2,116.7],"Hickman":[73.7,402.9],"Hopkins":[272.4,301.3],"Jackson":[738.2,281.0],"Jefferson":[512.5,160.8],"Jessamine":[654.5,213.0],"Johnson":[885.4,212.0],"Kenton":[664.8,30.9],"Knott":[880.9,292.6],"Knox":[757.9,370.9],"Larue":[520.1,265.2],"Laurel":[729.7,331.7],"Lawrence":[900.0,176.3],"Lee":[774.0,256.9],"Leslie":[816.7,325.8],"Letcher":[883.3,330.7],"Lewis":[810.9,92.7],"Lincoln":[648.6,288.6],"Livingston":[160.4,324.0],"Logan":[364.0,374.7],"Lyon":[193.3,340.2],"Madison":[695.6,239.3],"Magoffin":[853.7,240.6],"Marion":[568.8,266.6],"Marshall":[165.5,369.2],"Martin":[924.3,208.9],"Mason":[756.9,85.7],"McCracken":[118.7,342.9],"McCreary":[680.9,388.4],"McLean":[310.5,266.3],"Meade":[444.2,191.6],"Menifee":[782.5,191.8],"Mercer":[625.5,212.8],"Metcalfe":[520.4,347.4],"Monroe":[504.9,404.8],"Montgomery":[743.9,176.1],"Morgan":[838.9,197.2],"Muhlenberg":[324.6,310.3],"Nelson":[544.3,222.9],"Nicholas":[728.3,129.5],"Ohio":[368.6,273.5],"Oldham":[547.1,125.0],"Owen":[623.5,109.5],"Owsley":[777.3,284.2],"Pendleton":[685.9,65.6],"Perry":[834.2,313.8],"Pike":[943.4,262.4],"Powell":[757.6,217.7],"Pulaski":[652.5,335.2],"Robertson":[726.5,104.7],"Rockcastle":[690.7,291.2],"Rowan":[808.8,156.2],"Russell":[595.9,352.3],"Scott":[654.4,144.5],"Shelby":[567.8,152.8],"Simpson":[399.4,399.5],"Spencer":[558.5,187.6],"Taylor":[557.8,289.9],"Todd":[318.6,382.8],"Trigg":[230.1,391.0],"Trimble":[558.9,88.0],"Union":[216.5,237.1],"Warren":[422.0,352.6],"Washington":[575.4,228.6],"Wayne":[632.1,387.1],"Webster":[251.4,273.5],"Whitley":[725.2,397.1],"Wolfe":[799.6,231.2],"Woodford":[637.3,181.5]};
+const MI_PER_UNIT = 0.4192;
+const MULT = [1,1,2,3,3];
+
+const EASY = ["Jefferson","Fayette","Kenton","Boone","Warren","Daviess","Hardin","Campbell","Christian","McCracken","Madison","Boyd","Pike","Laurel","Pulaski","Franklin"];
+const MID = ["Barren","Bullitt","Scott","Nelson","Oldham","Henderson","Whitley","Harlan","Bell","Floyd","Marshall","Muhlenberg","Shelby","Clark","Jessamine","Calloway","Perry","Letcher","Knox","Rowan","Montgomery","Grayson","Hopkins","Meade","Greenup","Carter","Woodford","Anderson","Logan","Clay"];
+const HARD = ["Robertson","Menifee","Elliott","Wolfe","Magoffin","Owsley","Lee","Nicholas","Gallatin","Bracken","Carlisle","Hickman","Livingston","Crittenden","Trimble","Cumberland","Metcalfe","Powell","Bath","Fleming","Spencer","Ballard","Hancock","Lyon","Bracken","Wolfe","Green","Casey","Jackson","Estill","Morgan","Martin","Leslie","Knott","Todd","Edmonson","Hart","Marion","Washington","Carroll","Pendleton","Harrison","Lewis","Menifee"];
+const have = new Set(NAMES);
+const pick = a => [...new Set(a.filter(n=>have.has(n)))];
+const TIER = [pick(EASY), pick(EASY.concat(MID)), pick(MID), pick(MID.concat(HARD)), pick(HARD)];
+
+function seedFor(d){let h=2166136261;for(const c of d)h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0}
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+const today = new Date();
+const iso = today.getFullYear()+"-"+String(today.getMonth()+1).padStart(2,"0")+"-"+String(today.getDate()).padStart(2,"0");
+document.getElementById("date").textContent = today.toLocaleDateString(undefined,{month:"long",day:"numeric"});
+
+const rand = rng(seedFor(iso));
+const puzzle = [];
+for(const t of TIER){
+  let n, guard=0;
+  do{ n = t[Math.floor(rand()*t.length)]; guard++; }while(puzzle.includes(n) && guard<80);
+  puzzle.push(n);
+}
+
+const svg = document.getElementById("map");
+const gPin = document.getElementById("pin");
+const gTruth = document.getElementById("truth");
+const link = document.getElementById("link");
+const lockBtn = document.getElementById("lock");
+const readout = document.getElementById("readout");
+const tape = document.getElementById("tape");
+
+const FULL = {x:0,y:-100,w:1000,h:634};
+let view = {...FULL};
+let round = 0, scores = [], guess = null, done = false;
+
+function setView(v){
+  const maxW = FULL.w, minW = FULL.w/9;
+  v.w = Math.min(maxW, Math.max(minW, v.w));
+  v.h = v.w * (FULL.h/FULL.w);
+  v.x = Math.min(FULL.x+FULL.w-v.w, Math.max(FULL.x, v.x));
+  v.y = Math.min(FULL.y+FULL.h-v.h, Math.max(FULL.y, v.y));
+  view = v;
+  svg.setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.h}`);
+}
+function zoomBy(f){
+  const cx = view.x+view.w/2, cy = view.y+view.h/2;
+  const w = view.w/f, h = view.h/f;
+  setView({x:cx-w/2, y:cy-h/2, w, h});
+}
+document.getElementById("zin").onclick = ()=>zoomBy(1.8);
+document.getElementById("zout").onclick = ()=>zoomBy(1/1.8);
+document.getElementById("reset").onclick = ()=>setView({...FULL});
+
+function toSvg(cx, cy){
+  const p = svg.createSVGPoint(); p.x = cx; p.y = cy;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+let ptrs = new Map(), start = null, moved = false, pinchStart = null;
+svg.addEventListener("pointerdown", e=>{
+  svg.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===1){ start={x:e.clientX,y:e.clientY,view:{...view}}; moved=false; }
+  if(ptrs.size===2){
+    const [a,b]=[...ptrs.values()];
+    pinchStart={d:Math.hypot(a.x-b.x,a.y-b.y),view:{...view}};
+    moved=true;
+  }
+});
+svg.addEventListener("pointermove", e=>{
+  if(!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2 && pinchStart){
+    const [a,b]=[...ptrs.values()];
+    const d=Math.hypot(a.x-b.x,a.y-b.y);
+    const f=d/pinchStart.d;
+    const v=pinchStart.view;
+    const cx=v.x+v.w/2, cy=v.y+v.h/2, w=v.w/f;
+    setView({x:cx-w/2,y:cy-(w*(FULL.h/FULL.w))/2,w,h:0});
+    return;
+  }
+  if(!start) return;
+  const dx=e.clientX-start.x, dy=e.clientY-start.y;
+  if(Math.abs(dx)>5||Math.abs(dy)>5) moved=true;
+  if(!moved) return;
+  const scale = view.w / svg.getBoundingClientRect().width;
+  setView({x:start.view.x-dx*scale, y:start.view.y-dy*scale, w:start.view.w, h:start.view.h});
+});
+function endPtr(e){
+  const wasSingle = ptrs.size===1;
+  ptrs.delete(e.pointerId);
+  if(ptrs.size<2) pinchStart=null;
+  if(!wasSingle || moved || done){ if(ptrs.size===0) start=null; return; }
+  start=null;
+  const p = toSvg(e.clientX,e.clientY);
+  const el = document.elementFromPoint(e.clientX,e.clientY);
+  const county = (el && el.tagName==="path") ? el.dataset.n : null;
+  guess = {x:p.x, y:p.y, county};
+  gPin.setAttribute("transform",`translate(${p.x} ${p.y})`);
+  gPin.setAttribute("opacity","1");
+  lockBtn.disabled = false;
+  readout.innerHTML = `<span class="miles">Pin dropped. Move it or lock it in.</span>`;
+}
+svg.addEventListener("pointerup", endPtr);
+svg.addEventListener("pointercancel", endPtr);
+
+function scoreFor(mi, exact){
+  if(exact) return 100;
+  return Math.max(0, Math.round(100*Math.exp(-Math.pow(mi/60,1.3))));
+}
+
+function drawTape(){
+  tape.innerHTML = "";
+  for(let i=0;i<5;i++){
+    const d = document.createElement("div");
+    d.className = "cell" + (scores[i]===undefined?" pending":"") + (i===round&&!done?" now":"");
+    d.innerHTML = `<div class="n">&times;${MULT[i]}</div><div class="v">${scores[i]===undefined?"&middot;":scores[i]}</div>`;
+    tape.appendChild(d);
+  }
+}
+
+function startRound(){
+  guess = null;
+  gPin.setAttribute("opacity","0");
+  gTruth.setAttribute("opacity","0");
+  link.setAttribute("opacity","0");
+  document.querySelectorAll("#counties path.hit").forEach(p=>p.classList.remove("hit"));
+  document.getElementById("step").textContent = `Round ${round+1} of 5`;
+  document.getElementById("target").innerHTML = puzzle[round] + ` County<small>Tap where you think it is &middot; counts &times;${MULT[round]}</small>`;
+  lockBtn.textContent = "Lock it in";
+  lockBtn.disabled = true;
+  lockBtn.onclick = lockIn;
+  readout.innerHTML = "";
+  setView({...FULL});
+  drawTape();
+}
+
+function lockIn(){
+  const name = puzzle[round];
+  const c = CENT[name];
+  const mi = Math.hypot(guess.x-c[0], guess.y-c[1]) * MI_PER_UNIT;
+  const exact = guess.county === name;
+  const s = scoreFor(mi, exact);
+  scores[round] = s;
+
+  document.querySelectorAll("#counties path").forEach(p=>{ if(p.dataset.n===name) p.classList.add("hit"); });
+  gTruth.setAttribute("transform",`translate(${c[0]} ${c[1]})`);
+  gTruth.setAttribute("opacity","1");
+  link.setAttribute("x1",guess.x); link.setAttribute("y1",guess.y);
+  link.setAttribute("x2",c[0]); link.setAttribute("y2",c[1]);
+  link.setAttribute("opacity", exact?"0":"1");
+
+  readout.innerHTML = exact
+    ? `<b>${s} points.</b> Dead on &mdash; you tapped inside ${name}.`
+    : `<b>${s} points.</b> <span class="miles">${mi<10?mi.toFixed(1):Math.round(mi)} miles off${guess.county?`, you landed in ${guess.county}`:""}.</span>`;
+
+  drawTape();
+  lockBtn.disabled = false;
+  lockBtn.textContent = round<4 ? "Next county" : "See your score";
+  lockBtn.onclick = ()=>{ round++; if(round<5) startRound(); else finish(); };
+}
+
+function emoji(s){ return s>=95?"\u{1F3AF}":s>=85?"\u{1F389}":s>=70?"\u{1F525}":s>=50?"\u{1F31F}":s>=25?"\u{1F914}":"\u{1F4A5}"; }
+
+function finish(){
+  done = true;
+  const total = scores.reduce((a,s,i)=>a+s*MULT[i],0);
+  document.getElementById("step").textContent = "Done";
+  document.getElementById("target").innerHTML = `That's the run<small>${iso}</small>`;
+  lockBtn.style.display = "none";
+  readout.innerHTML = "";
+  drawTape();
+  const share = `120.gg ${iso}\n` + scores.map(s=>`${s}${emoji(s)}`).join(" ") + `\nFinal score: ${total}`;
+  document.getElementById("final").innerHTML =
+    `<div class="final"><div class="big">${total}<span class="of"> / 1000</span></div>
+     <pre id="share">${share}</pre>
+     <button id="copy" style="width:100%">Copy result</button></div>`;
+  document.getElementById("copy").onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(share); document.getElementById("copy").textContent="Copied"; }
+    catch(e){ document.getElementById("copy").textContent="Select the text above to copy"; }
+  };
+}
+
+startRound();
+</script>
+</body>
+</html>
