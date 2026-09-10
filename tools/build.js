@@ -19,6 +19,17 @@ const webp = fs.readFileSync(path.join(DATA, 'relief.webp'));
 const BACKDROP_OPACITY = 0.10;
 const backdropFile = ['backdrop.webp','backdrop.jpg','backdrop.jpeg','backdrop.png']
   .map(f => path.join(DATA, f)).find(fs.existsSync);
+/* backdrop.webp is derived from the full-res source by tools/backdrop.py and
+   wins the lookup above. Say so loudly if the source is newer, or a fresh
+   upload silently does nothing. */
+const backdropSrc = ['backdrop.jpg','backdrop.jpeg','backdrop.png']
+  .map(f => path.join(DATA, f)).find(fs.existsSync);
+const derived = path.join(DATA, 'backdrop.webp');
+if (backdropSrc && fs.existsSync(derived) &&
+    fs.statSync(backdropSrc).mtimeMs > fs.statSync(derived).mtimeMs) {
+  console.error(`  ! ${path.basename(backdropSrc)} is newer than backdrop.webp — ` +
+    `run tools/backdrop.py to regenerate, or the old backdrop stays inlined`);
+}
 let backdropCss = '';
 if (backdropFile) {
   const ext = path.extname(backdropFile).slice(1).replace('jpg','jpeg');
