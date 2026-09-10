@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>120 &middot; a Kentucky county game</title>
+<title>County As Hell &middot; A Kentucky Map Game</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
@@ -24,10 +24,11 @@ body{
   padding:16px 12px 40px;
 }
 .wrap{width:100%;max-width:520px}
-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
-h1{font-size:15px;font-weight:600;letter-spacing:.14em;margin:0}
-h1 span{color:var(--ink-2);font-weight:400;letter-spacing:.02em}
-.date{font-size:13px;color:var(--ink-2)}
+header{display:flex;align-items:baseline;justify-content:space-between;
+  gap:4px 12px;flex-wrap:wrap;margin-bottom:14px}
+h1{font-size:15px;font-weight:600;letter-spacing:.05em;margin:0}
+h1 span{color:var(--ink-2);font-weight:400;letter-spacing:.02em;white-space:nowrap}
+.date{font-size:13px;color:var(--ink-2);white-space:nowrap;margin-left:auto}
 
 .prompt{margin:0 0 10px}
 .step{font-size:12px;letter-spacing:.12em;color:var(--ink-2);margin:0 0 2px}
@@ -87,7 +88,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
 <body>
 <div class="wrap">
 <header>
-  <h1>120 <span>&mdash; kentucky counties</span></h1>
+  <h1>County As Hell <span>&mdash; A Kentucky Map Game</span></h1>
   <div class="date" id="date"></div>
 </header>
 
