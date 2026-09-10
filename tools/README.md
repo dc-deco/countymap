@@ -16,6 +16,21 @@ node tools/build.js          # tools/data/* + tools/template.html -> index.html
 Edit `tools/template.html` for any markup, CSS or game-logic change, then
 rebuild. Do not hand-edit `index.html` — it is generated and will be overwritten.
 
+The faint page backdrop is `tools/data/backdrop.webp`, inlined behind the
+whole page at the opacity set by `BACKDROP_OPACITY` in `build.js` (currently
+0.10). `backdrop.jpeg` is the full-resolution source; regenerate the WebP
+with:
+
+```sh
+python3 tools/backdrop.py tools/data/backdrop.jpeg tools/data/backdrop.webp \
+  --blur 1.8 --sat 0.65 --q 46 --width 1200
+```
+
+The blur is baked in rather than applied with a CSS filter: a filter on a
+full-viewport fixed layer costs GPU on phones, and a pre-blurred image also
+compresses about 3x smaller. Delete `backdrop.webp` (and the `.jpeg`) and the
+build simply omits the rule.
+
 To fix or reword a county fun fact, edit `tools/data/facts.json` (a plain
 name -> sentence map) and rebuild. The build fails if any of the 120 counties
 is missing a fact, or if a fact names a county that does not exist. Facts are

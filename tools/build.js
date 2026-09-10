@@ -16,7 +16,7 @@ const webp = fs.readFileSync(path.join(DATA, 'relief.webp'));
 
 /* Optional page backdrop: drop a backdrop.* into tools/data and it gets
    inlined. Absent, the rule is omitted entirely and the page is unchanged. */
-const BACKDROP_OPACITY = 0.07;
+const BACKDROP_OPACITY = 0.10;
 const backdropFile = ['backdrop.webp','backdrop.jpg','backdrop.jpeg','backdrop.png']
   .map(f => path.join(DATA, f)).find(fs.existsSync);
 let backdropCss = '';
