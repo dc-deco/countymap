@@ -327,6 +327,23 @@ function scoreFor(mi, exact){
   return Math.max(0, Math.round(100*Math.exp(-Math.pow(mi/60,1.3))));
 }
 
+/* How the reveal reads. Nothing here claims more than the distance knows —
+   no "next county over", since adjacency is never computed. `landed` is null
+   when the tap came down outside Kentucky altogether. */
+function verdict(mi, exact, target, landed){
+  const d = mi < 10 ? mi.toFixed(1) : String(Math.round(mi));
+  /* band on the number actually shown, so 14.9 does not print "15 miles off"
+     alongside the under-15 line while a true 15 gets a different one */
+  const shown = Number(d);
+  if(exact)       return `Dead on. You're standing in ${target}.`;
+  if(!landed)     return `${d} miles off &mdash; you're not even in Kentucky.`;
+  if(shown < 15)  return `${d} miles off. You're in ${landed}, close enough to wave at ${target}.`;
+  if(shown < 40)  return `${d} miles off. You pulled up in ${landed}.`;
+  if(shown < 90)  return `${d} miles off. Right neck of the woods, wrong county &mdash; that's ${landed}.`;
+  if(shown < 180) return `${d} miles off. That's ${landed}, and it's a fair drive from ${target}.`;
+  return `${d} miles off. You're way out in ${landed}.`;
+}
+
 function drawTape(){
   tape.innerHTML = "";
   for(let i=0;i<5;i++){
@@ -370,8 +387,8 @@ function lockIn(){
   link.setAttribute("opacity", exact?"0":"1");
 
   readout.innerHTML = exact
-    ? `<b>${s} points.</b> Dead on &mdash; you tapped inside ${name}.`
-    : `<b>${s} points.</b> <span class="miles">${mi<10?mi.toFixed(1):Math.round(mi)} miles off${guess.county?`, you landed in ${guess.county}`:""}.</span>`;
+    ? `<b>${s} points.</b> ${verdict(mi, true, name, guess.county)}`
+    : `<b>${s} points.</b> <span class="miles">${verdict(mi, false, name, guess.county)}</span>`;
 
   showFact(name);
   drawTape();
