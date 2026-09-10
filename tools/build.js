@@ -17,29 +17,39 @@ const webp = fs.readFileSync(path.join(DATA, 'relief.webp'));
 /* Optional page backdrop: drop a backdrop.* into tools/data and it gets
    inlined. Absent, the rule is omitted entirely and the page is unchanged. */
 const BACKDROP_OPACITY = 0.15;
-const backdropFile = ['backdrop.webp','backdrop.jpg','backdrop.jpeg','backdrop.png']
-  .map(f => path.join(DATA, f)).find(fs.existsSync);
-/* backdrop.webp is derived from the full-res source by tools/backdrop.py and
-   wins the lookup above. Say so loudly if the source is newer, or a fresh
-   upload silently does nothing. */
-const backdropSrc = ['backdrop.jpg','backdrop.jpeg','backdrop.png']
-  .map(f => path.join(DATA, f)).find(fs.existsSync);
-const derived = path.join(DATA, 'backdrop.webp');
-if (backdropSrc && fs.existsSync(derived) &&
-    fs.statSync(backdropSrc).mtimeMs > fs.statSync(derived).mtimeMs) {
-  console.error(`  ! ${path.basename(backdropSrc)} is newer than backdrop.webp — ` +
+const uriFor = f => {
+  const ext = path.extname(f).slice(1).replace('jpg','jpeg');
+  return `data:image/${ext};base64,` + fs.readFileSync(f).toString('base64');
+};
+const pick = names => names.map(f => path.join(DATA, f)).find(fs.existsSync);
+/* Two crops. A landscape photo cannot both fill a portrait screen and show
+   the whole scene: `cover` on a ~0.5-aspect phone magnifies a 1.5-aspect
+   image about 3x and throws away the sides. backdrop-tall is a portrait
+   composite (whole vista over a blurred blow-up of itself) used whenever the
+   viewport is taller than it is wide. */
+const wideFile = pick(['backdrop.webp','backdrop.jpg','backdrop.jpeg','backdrop.png']);
+const tallFile = pick(['backdrop-tall.webp','backdrop-tall.jpg','backdrop-tall.png']);
+const backdropSrc = pick(['backdrop.jpg','backdrop.jpeg','backdrop.png']);
+if (backdropSrc && wideFile && wideFile !== backdropSrc &&
+    fs.statSync(backdropSrc).mtimeMs > fs.statSync(wideFile).mtimeMs) {
+  console.error(`  ! ${path.basename(backdropSrc)} is newer than ${path.basename(wideFile)} — ` +
     `run tools/backdrop.py to regenerate, or the old backdrop stays inlined`);
 }
 let backdropCss = '';
-if (backdropFile) {
-  const ext = path.extname(backdropFile).slice(1).replace('jpg','jpeg');
-  const uri = 'data:image/' + ext + ';base64,' + fs.readFileSync(backdropFile).toString('base64');
+if (wideFile) {
   backdropCss =
 `/* faint page backdrop; the map and panels paint over it opaquely */
 body::before{
   content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:url(${uri}) center center / cover no-repeat;
+  background:url(${uriFor(wideFile)}) center center / cover no-repeat;
   opacity:${BACKDROP_OPACITY};
+}`;
+  if (tallFile) backdropCss +=
+`
+/* portrait viewports get the tall crop, so a phone shows the whole scene
+   rather than a magnified sliver of its middle */
+@media (max-aspect-ratio: 1/1){
+  body::before{background-image:url(${uriFor(tallFile)})}
 }`;
 }
 
@@ -94,6 +104,8 @@ fs.writeFileSync(OUT, html);
 console.log(`wrote ${OUT}  ${(fs.statSync(OUT).size/1024).toFixed(0)} KB`);
 console.log(`  ${NAMES.length} counties, ${W.rivers.length} river segs, ${W.lakes.length} lakes, ${W.urban.length} urban`);
 console.log(`  relief ${(webp.length/1024).toFixed(0)} KB webp -> ${(webp.length*4/3/1024).toFixed(0)} KB base64`);
-console.log(backdropFile
-  ? `  backdrop ${path.basename(backdropFile)} ${(fs.statSync(backdropFile).size/1024).toFixed(0)} KB at ${BACKDROP_OPACITY} opacity`
+console.log(wideFile
+  ? `  backdrop ${path.basename(wideFile)} ${(fs.statSync(wideFile).size/1024).toFixed(0)} KB` +
+    (tallFile ? ` + ${path.basename(tallFile)} ${(fs.statSync(tallFile).size/1024).toFixed(0)} KB` : ' (no portrait crop)') +
+    ` at ${BACKDROP_OPACITY} opacity`
   : '  backdrop none (add tools/data/backdrop.jpg to enable)');

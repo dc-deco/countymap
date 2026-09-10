@@ -16,14 +16,24 @@ node tools/build.js          # tools/data/* + tools/template.html -> index.html
 Edit `tools/template.html` for any markup, CSS or game-logic change, then
 rebuild. Do not hand-edit `index.html` — it is generated and will be overwritten.
 
-The faint page backdrop is `tools/data/backdrop.webp`, inlined behind the
-whole page at the opacity set by `BACKDROP_OPACITY` in `build.js` (currently
-0.10). `backdrop.jpeg` is the full-resolution source; regenerate the WebP
-with:
+The faint page backdrop is inlined behind the whole page at the opacity set
+by `BACKDROP_OPACITY` in `build.js` (currently 0.15). It ships as **two**
+crops, because `background-size: cover` cannot both fill a portrait screen
+and show a landscape photo: on a ~0.5-aspect phone a 1.5-aspect image is
+magnified about 3x and the sides are thrown away.
+
+- `backdrop.webp` — landscape, used by default.
+- `backdrop-tall.webp` — portrait composite for `max-aspect-ratio: 1/1`. The
+  whole scene sits across the width over a blurred blow-up of itself, seam
+  feathered, so a phone shows the vista rather than a magnified sliver.
+
+`backdrop.jpeg` is the full-resolution source. Regenerate both with:
 
 ```sh
 python3 tools/backdrop.py tools/data/backdrop.jpeg tools/data/backdrop.webp \
-  --blur 1.8 --sat 0.65 --q 46 --width 1200
+  --width 1400 --blur 1.4 --sat 0.65 --q 46
+python3 tools/backdrop.py tools/data/backdrop.jpeg tools/data/backdrop-tall.webp \
+  --portrait 1400x2100 --blur 1.2 --sat 0.65 --q 46
 ```
 
 The blur is baked in rather than applied with a CSS filter: a filter on a

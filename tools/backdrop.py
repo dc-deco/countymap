@@ -16,7 +16,32 @@ Q   = opt('--q', 50, int)
 BL  = opt('--blur', 0.0)
 SAT = opt('--sat', 1.0)
 im = Image.open(src).convert('RGB')
-im = im.resize((W, round(W*im.size[1]/im.size[0])), Image.LANCZOS)
+
+# --portrait WxH: fit the whole scene across the width of a tall canvas and
+# fill the rest with a heavily blurred blow-up of itself, feathered at the
+# seam. Lets `background-size:cover` on a phone show the entire vista instead
+# of a magnified centre slice.
+if '--portrait' in a:
+    PW, PH = (int(v) for v in a[a.index('--portrait')+1].lower().split('x'))
+    sc = max(PW/im.size[0], PH/im.size[1])
+    fill = im.resize((round(im.size[0]*sc), round(im.size[1]*sc)), Image.LANCZOS)
+    fill = fill.crop((round((fill.size[0]-PW)/2), round((fill.size[1]-PH)/2),
+                      round((fill.size[0]-PW)/2)+PW, round((fill.size[1]-PH)/2)+PH))
+    fill = fill.filter(ImageFilter.GaussianBlur(PW*0.05))
+    front = im.resize((PW, round(PW*im.size[1]/im.size[0])), Image.LANCZOS)
+    top = round((PH - front.size[1]) / 2)
+    feather = max(8, round(front.size[1]*0.12))
+    mask = Image.new('L', front.size, 255)
+    px = mask.load()
+    for y in range(feather):
+        v = round(255*y/feather)
+        for x in range(front.size[0]):
+            px[x, y] = v
+            px[x, front.size[1]-1-y] = v
+    fill.paste(front, (0, top), mask)
+    im = fill
+else:
+    im = im.resize((W, round(W*im.size[1]/im.size[0])), Image.LANCZOS)
 if BL:  im = im.filter(ImageFilter.GaussianBlur(BL))
 if SAT != 1.0: im = ImageEnhance.Color(im).enhance(SAT)
 im.save(out, 'WEBP', quality=Q, method=6)
