@@ -34,6 +34,9 @@ h1 span{color:var(--ink-2);font-weight:400;letter-spacing:.02em;white-space:nowr
 .step{font-size:12px;letter-spacing:.12em;color:var(--ink-2);margin:0 0 2px}
 .target{font-size:38px;line-height:1.05;font-weight:600;margin:0;letter-spacing:-.02em}
 .target small{font-size:15px;font-weight:400;color:var(--ink-2);letter-spacing:0;display:block;margin-top:2px}
+/* sign-offs are sentences, not two-word county names, so they get a size
+   that keeps them to two lines on a phone */
+.target.ending{font-size:30px;line-height:1.1}
 
 .mapbox{position:relative;background:#93A48C;border:1px solid #46524B;overflow:hidden;touch-action:none}
 svg#map{display:block;width:100%;height:auto;aspect-ratio:__SVG_W__ / __SVG_H__;cursor:crosshair}
@@ -379,11 +382,29 @@ function lockIn(){
 
 function emoji(s){ return s>=95?"\u{1F3AF}":s>=85?"\u{1F389}":s>=70?"\u{1F525}":s>=50?"\u{1F31F}":s>=25?"\u{1F914}":"\u{1F4A5}"; }
 
+/* Sign-off for the final score, out of 1000. Highest matching floor wins,
+   so the bands stay in descending order. */
+const ENDINGS = [
+  [800, "You're county as hell"],
+  [550, "You know your backroads"],
+  [200, "You've been through once or twice"],
+  [0,   "Not so fast, city boy"],
+];
+function endingFor(total){
+  for(const [floor, line] of ENDINGS) if(total >= floor) return line;
+  return ENDINGS[ENDINGS.length-1][1];
+}
+
 function finish(){
   done = true;
   const total = scores.reduce((a,s,i)=>a+s*MULT[i],0);
   document.getElementById("step").textContent = "Done";
-  document.getElementById("target").innerHTML = `That's the run<small>${iso}</small>`;
+  const target = document.getElementById("target");
+  target.classList.add("ending");
+  target.textContent = endingFor(total);
+  const stamp = document.createElement("small");
+  stamp.textContent = iso;
+  target.appendChild(stamp);
   lockBtn.style.display = "none";
   readout.innerHTML = "";
   factBox.hidden = true;
