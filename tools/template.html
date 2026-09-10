@@ -16,7 +16,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 __BACKDROP_CSS__
-html,body{margin:0;padding:0}
+html,body{margin:0;padding:0;touch-action:pan-y}
 html{background:var(--paper)}
 body{
   background:transparent; color:var(--ink);
@@ -189,6 +189,15 @@ function milesBetween(a, b){
   const dLat = (b[1]-a[1])*t, dLon = (b[0]-a[0])*t;
   const s = Math.sin(dLat/2)**2 + Math.cos(a[1]*t)*Math.cos(b[1]*t)*Math.sin(dLon/2)**2;
   return 2*R*Math.asin(Math.min(1, Math.sqrt(s)));
+}
+
+/* iOS Safari ignores user-scalable=no, so pinching anywhere outside the map
+   zoomed the whole page. touch-action:pan-y withdraws page pinch-zoom while
+   keeping vertical scroll; these WebKit-only gesture events are the belt to
+   that braces on older iOS, where touch-action alone is not enough. The map
+   runs its own pinch handler, so no browser zoom is wanted anywhere. */
+for(const type of ["gesturestart","gesturechange","gestureend"]){
+  document.addEventListener(type, e=>e.preventDefault(), {passive:false});
 }
 
 const svg = document.getElementById("map");
