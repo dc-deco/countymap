@@ -139,10 +139,12 @@ dialog.pop #copy{width:100%}
 .rfact{margin:3px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2)}
 /* full-bleed header: cancel the sheet's padding so the sign meets the edges */
 .welcomeimg{display:block;width:calc(100% + 36px);height:auto;margin:-20px -18px 16px}
-.weltitle{font-size:21px;line-height:1.2;font-weight:600;letter-spacing:-.01em;margin:0 0 4px;padding-right:34px}
-/* block, so the greeting keeps its own line at any width rather than
-   depending on where the text happens to wrap */
-.weltitle .hey{display:block}
+.weltitle{font-size:clamp(16px,4.9vw,20px);line-height:1.25;font-weight:600;letter-spacing:-.01em;margin:0 0 4px}
+/* blocks, so each line holds at any width rather than depending on where the
+   text happens to wrap. Only the first line clears the close button — giving
+   the whole heading that padding squeezed the longer lines into wrapping. */
+.weltitle .ln{display:block}
+.weltitle .ln:first-child{padding-right:34px}
 dialog.pop .body{font-size:15px;line-height:1.55;margin:10px 0 0}
 dialog.pop #welGo{width:100%;margin-top:18px}
 .linky{background:none;border:0;padding:0;font-size:inherit;color:var(--ink-2);
@@ -212,7 +214,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <button id="welClose" class="x" aria-label="Close">&times;</button>
   <div class="sheet">
   __WELCOME_IMG__
-  <h2 class="weltitle" id="welTitle"><span class="hey">Hey Y'all</span> Welcome to County As Hell, a Kentucky map game.</h2>
+  <h2 class="weltitle" id="welTitle"><span class="ln">Hey Y'all</span> <span class="ln">Welcome to County As Hell,</span> a Kentucky map game.</h2>
   <h3 class="rechead" style="margin-top:14px">Do what now?</h3>
   <p class="body">What we're gonna do here is select the location of 5 different counties in
   Kentucky a day, then share it with your friends.</p>
