@@ -93,9 +93,9 @@ dialog.pop{
      fought that and pushed the frame off screen. Only the non-modal fallback
      below needs placing. */
   width:calc(100% - 24px);max-width:520px;max-height:88vh;
-  overflow:hidden;padding:0;
+  overflow:hidden;padding:0;border-radius:20px;
   border:1px solid var(--ink);background:var(--panel);
-  color:var(--ink);box-shadow:0 18px 50px rgba(20,28,24,.34);
+  color:var(--ink);box-shadow:0 20px 56px rgba(20,28,24,.32);
 }
 /* display lives on [open] only: a bare dialog.pop{display:flex} outranks the UA
    rule that hides a closed dialog, leaving it over the page eating clicks.
@@ -121,8 +121,9 @@ html.intro body::before{opacity:1}
   body::before{transition:opacity .45s ease}
 }
 dialog.pop .x{
-  position:absolute;top:8px;right:8px;z-index:2;width:36px;height:36px;padding:0;
-  font-size:22px;line-height:1;border-color:var(--line);background:var(--panel);
+  position:absolute;top:10px;right:10px;z-index:2;width:36px;height:36px;padding:0;
+  font-size:22px;line-height:1;border-radius:50%;border-color:var(--line);
+  background:var(--panel);
 }
 dialog.pop .step{margin:0 0 2px}
 .resverdict{font-size:24px;line-height:1.12;font-weight:600;letter-spacing:-.02em;margin:0 0 8px;padding-right:36px}
