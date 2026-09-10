@@ -85,7 +85,45 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
 .cell.pending .v{color:var(--line-2)}
 .cell.now{border-color:var(--ink);border-width:2px}
 
+#results{
+  /* a modal dialog is centred by the UA in the top layer; hand-positioning it
+     fought that and pushed the frame off screen. Only the non-modal fallback
+     below needs placing. */
+  width:calc(100% - 24px);max-width:520px;max-height:88vh;
+  overflow:hidden;padding:0;
+  border:1px solid var(--ink);background:var(--panel);
+  color:var(--ink);box-shadow:0 18px 50px rgba(20,28,24,.34);
+}
+/* display lives on [open] only: a bare #results{display:flex} outranks the UA
+   rule that hides a closed dialog, leaving it over the page eating clicks.
+   The frame is fixed and the sheet inside it scrolls, so the close button
+   stays reachable after reading down through the five facts. */
+#results[open]{display:flex;flex-direction:column}
+/* min-height:0 or the flex item refuses to shrink below its content and the
+   dialog grows past max-height, pushing its top off screen */
+#results .sheet{flex:1 1 auto;min-height:0;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;padding:20px 18px 22px}
+#results::backdrop{background:rgba(22,30,26,.55)}
+#results:not(:modal){position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60}
+html.locked,html.locked body{overflow:hidden}
+#results .x{
+  position:absolute;top:8px;right:8px;z-index:2;width:36px;height:36px;padding:0;
+  font-size:22px;line-height:1;border-color:var(--line);background:var(--panel);
+}
+#results .step{margin:0 0 2px}
+.resverdict{font-size:24px;line-height:1.12;font-weight:600;letter-spacing:-.02em;margin:0 0 8px;padding-right:36px}
+#results .big{font-size:44px;font-weight:600;letter-spacing:-.02em;line-height:1;margin:0}
+#results #copy{width:100%}
+.rechead{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);
+  font-weight:600;margin:22px 0 0;border-top:1px solid var(--line);padding-top:12px}
+.recap{list-style:none;margin:0;padding:0}
+.recap li{padding:11px 0;border-bottom:1px solid var(--line)}
+.recap li:last-child{border-bottom:0;padding-bottom:0}
+.rname{margin:0;font-weight:600;font-size:15px;display:flex;gap:10px;align-items:baseline}
+.rscore{margin-left:auto;font-weight:400;font-size:13px;color:var(--ink-2);white-space:nowrap}
+.rfact{margin:3px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2)}
 .final{margin-top:20px;border-top:2px solid var(--ink);padding-top:14px}
+.final button{width:100%}
 .final .big{font-size:46px;font-weight:600;letter-spacing:-.02em;line-height:1}
 .final .of{font-size:16px;color:var(--ink-2);font-weight:400}
 pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid var(--line);padding:12px;white-space:pre-wrap;margin:12px 0}
@@ -142,6 +180,19 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
 
 <div class="tape" id="tape"></div>
 <div id="final"></div>
+
+<dialog id="results" aria-labelledby="resTitle">
+  <button id="resClose" class="x" aria-label="Close results">&times;</button>
+  <div class="sheet">
+  <p class="step" id="resStep"></p>
+  <h2 class="resverdict" id="resTitle"></h2>
+  <p class="big" id="resScore"></p>
+  <pre id="share"></pre>
+  <button id="copy" class="primary">Share your score</button>
+  <h3 class="rechead">The five counties</h3>
+  <ol class="recap" id="recap"></ol>
+  </div>
+</dialog>
 
 <p class="byline">A Kentucky map game by <a href="https://dandecoste.com" target="_blank" rel="noopener noreferrer">Dan DeCoste</a></p>
 <p class="credits">Shaded relief built from Mapzen / AWS Terrain Tiles (USGS NED, SRTM). County and state
@@ -423,27 +474,10 @@ function endingFor(total){
   return ENDINGS[ENDINGS.length-1][1];
 }
 
-function finish(){
-  done = true;
-  const total = scores.reduce((a,s,i)=>a+s*MULT[i],0);
-  document.getElementById("step").textContent = "Done";
-  const target = document.getElementById("target");
-  target.classList.add("ending");
-  target.textContent = endingFor(total);
-  const stamp = document.createElement("small");
-  stamp.textContent = iso;
-  target.appendChild(stamp);
-  lockBtn.style.display = "none";
-  readout.innerHTML = "";
-  factBox.hidden = true;
-  drawTape();
-  const share = `countyashell.com ${iso}\n` + scores.map(s=>`${s}${emoji(s)}`).join(" ") + `\nFinal score: ${total}`;
-  document.getElementById("final").innerHTML =
-    `<div class="final"><div class="big">${total}<span class="of"> / 1000</span></div>
-     <pre id="share">${share}</pre>
-     <button id="copy" class="primary" style="width:100%">Share your score</button></div>`;
+function wireShare(share){
   const shareBtn = document.getElementById("copy");
   const payload = {text: share};
+  shareBtn.textContent = "Share your score";
   shareBtn.onclick = async ()=>{
     /* Hand off to the OS share sheet where there is one (phones, Safari,
        Edge): one tap into Messages instead of copy-then-go-find-an-app. */
@@ -462,6 +496,84 @@ function finish(){
     try{ await navigator.clipboard.writeText(share); shareBtn.textContent="Copied to clipboard"; }
     catch(e){ shareBtn.textContent="Select the text above to copy"; }
   };
+}
+
+const dlg = document.getElementById("results");
+function openResults(){
+  document.documentElement.classList.add("locked");
+  if(typeof dlg.showModal === "function" && !dlg.open) dlg.showModal();
+  else dlg.setAttribute("open","");
+  dlg.scrollTop = 0;
+}
+function closeResults(){
+  document.documentElement.classList.remove("locked");
+  if(typeof dlg.close === "function") dlg.close();
+  else dlg.removeAttribute("open");
+}
+document.getElementById("resClose").onclick = closeResults;
+/* Esc and backdrop dismissal go through the dialog's own close event, so the
+   scroll lock is released no matter how the sheet was dismissed. */
+dlg.addEventListener("close", ()=>document.documentElement.classList.remove("locked"));
+/* A click on the backdrop reports the dialog as its target — but so does a
+   click on the dialog's own padding, so compare against the box instead. */
+dlg.addEventListener("click", e=>{
+  if(e.target !== dlg) return;
+  const r = dlg.getBoundingClientRect();
+  const inside = e.clientX >= r.left && e.clientX <= r.right &&
+                 e.clientY >= r.top  && e.clientY <= r.bottom;
+  if(!inside) closeResults();
+});
+
+function finish(){
+  done = true;
+  const total = scores.reduce((a,s,i)=>a+s*MULT[i],0);
+  document.getElementById("step").textContent = "Done";
+  const target = document.getElementById("target");
+  target.classList.add("ending");
+  target.textContent = endingFor(total);
+  const stamp = document.createElement("small");
+  stamp.textContent = iso;
+  target.appendChild(stamp);
+  lockBtn.style.display = "none";
+  readout.innerHTML = "";
+  factBox.hidden = true;
+  drawTape();
+
+  const share = `countyashell.com ${iso}\n` + scores.map(s=>`${s}${emoji(s)}`).join(" ") + `\nFinal score: ${total}`;
+  document.getElementById("resStep").textContent = `Done \u00B7 ${iso}`;
+  document.getElementById("resTitle").textContent = endingFor(total);
+  const big = document.getElementById("resScore");
+  big.textContent = String(total);
+  const of = document.createElement("span");
+  of.className = "of"; of.textContent = " / 1000";
+  big.appendChild(of);
+  document.getElementById("share").textContent = share;
+  wireShare(share);
+
+  /* Second pass at the day's facts, which is where they actually stick.
+     Built with textContent so the copy cannot be read as markup. */
+  const recap = document.getElementById("recap");
+  recap.innerHTML = "";
+  puzzle.forEach((name, i)=>{
+    const li = document.createElement("li");
+    const head = document.createElement("p");
+    head.className = "rname";
+    head.appendChild(document.createTextNode(name + " County"));
+    const sc = document.createElement("span");
+    sc.className = "rscore";
+    sc.textContent = `${scores[i]} \u00D7 ${MULT[i]} = ${scores[i]*MULT[i]}`;
+    head.appendChild(sc);
+    const fact = document.createElement("p");
+    fact.className = "rfact";
+    fact.textContent = FACTS[name] || "";
+    li.append(head, fact);
+    recap.appendChild(li);
+  });
+
+  document.getElementById("final").innerHTML =
+    `<div class="final"><button id="reopen">See your results</button></div>`;
+  document.getElementById("reopen").onclick = openResults;
+  openResults();
 }
 
 startRound();
