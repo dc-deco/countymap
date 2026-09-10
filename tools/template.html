@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>120 &middot; a Kentucky county game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E7EBE8; --panel:#F4F6F4; --ink:#1B2420; --ink-2:#5C6963;
+  --line:#A9B5AF; --line-2:#7C8A84;
+  --grass:#43703C; --madder:#9B3B26;
+  --shell:#D9DFDB; --amber:#E4A93C;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:Archivo,system-ui,-apple-system,sans-serif;
+  font-size:16px; line-height:1.5;
+  display:flex; justify-content:center;
+  padding:16px 12px 40px;
+}
+.wrap{width:100%;max-width:520px}
+header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+h1{font-size:15px;font-weight:600;letter-spacing:.14em;margin:0}
+h1 span{color:var(--ink-2);font-weight:400;letter-spacing:.02em}
+.date{font-size:13px;color:var(--ink-2)}
+
+.prompt{margin:0 0 10px}
+.step{font-size:12px;letter-spacing:.12em;color:var(--ink-2);margin:0 0 2px}
+.target{font-size:38px;line-height:1.05;font-weight:600;margin:0;letter-spacing:-.02em}
+.target small{font-size:15px;font-weight:400;color:var(--ink-2);letter-spacing:0;display:block;margin-top:2px}
+
+.mapbox{position:relative;background:#93A48C;border:1px solid #46524B;overflow:hidden;touch-action:none}
+svg#map{display:block;width:100%;height:auto;aspect-ratio:__SVG_W__ / __SVG_H__;cursor:crosshair}
+#pin,#truth,#link,#terrain,#urban,#water,#outside,#edge{pointer-events:none}
+#counties path{fill:transparent;pointer-events:all;stroke:#26302B;stroke-width:.75;stroke-opacity:.42;vector-effect:non-scaling-stroke}
+#counties path.hit{fill:rgba(228,169,60,.45);stroke:#2A2013;stroke-width:2;stroke-opacity:1}
+button{
+  font-family:inherit;font-size:15px;background:var(--panel);color:var(--ink);
+  border:1px solid var(--line-2);padding:11px 16px;cursor:pointer;
+}
+button:active{background:var(--shell)}
+button:disabled{color:var(--line-2);cursor:default}
+button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
+
+.controls{display:flex;gap:8px;margin-top:10px}
+.controls #reset{flex:1}
+.zbtn{flex:0 0 54px;font-size:19px;padding:11px 0;line-height:1}
+#lock{width:100%;margin-top:8px}
+.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.primary:active{background:#2F3B35}
+.primary:disabled{background:var(--shell);color:var(--line-2);border-color:var(--line)}
+
+.readout{margin-top:12px;min-height:52px;font-size:15px}
+.readout b{font-weight:600}
+.readout .miles{color:var(--ink-2)}
+.hint{font-size:13px;color:var(--ink-2);margin-top:10px}
+.credits{font-size:11px;line-height:1.45;color:var(--line-2);margin-top:18px;border-top:1px solid var(--line);padding-top:8px}
+
+.tape{display:flex;gap:4px;margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+.cell{flex:1;text-align:center;padding:6px 2px;border:1px solid var(--line)}
+.cell .n{font-size:11px;color:var(--ink-2);letter-spacing:.08em}
+.cell .v{font-size:19px;font-weight:600}
+.cell.pending .v{color:var(--line-2)}
+.cell.now{border-color:var(--ink);border-width:2px}
+
+.final{margin-top:20px;border-top:2px solid var(--ink);padding-top:14px}
+.final .big{font-size:46px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.final .of{font-size:16px;color:var(--ink-2);font-weight:400}
+pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid var(--line);padding:12px;white-space:pre-wrap;margin:12px 0}
+@media (prefers-reduced-motion:no-preference){
+  #pin,#truth,#link{transition:opacity .18s ease}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>120 <span>&mdash; kentucky counties</span></h1>
+  <div class="date" id="date"></div>
+</header>
+
+<div class="prompt">
+  <p class="step" id="step">Round 1 of 5</p>
+  <h2 class="target" id="target">&nbsp;<small id="sub">Tap where you think it is</small></h2>
+</div>
+
+<div class="mapbox">
+  <svg id="map" viewBox="0 0 __SVG_W__ __SVG_H__" role="application" aria-label="Shaded relief map of Kentucky and its counties">
+    <image id="terrain" x="0" y="0" width="__SVG_W__" height="__SVG_H__" preserveAspectRatio="none" href="__TERRAIN__"/>
+    <g id="urban" fill="#8E8578" fill-opacity=".38">__URBAN__</g>
+    <g id="water">
+      <g id="rivers" fill="none" stroke="#4E7A9E" stroke-opacity=".85" stroke-linecap="round" stroke-linejoin="round">__RIVERS__</g>
+      <g id="lakes" fill="#4E7A9E" fill-opacity=".9" stroke="#3D6684" stroke-width="1" stroke-opacity=".8">__LAKES__</g>
+    </g>
+    <path id="outside" fill="#E7EBE8" fill-opacity=".6" fill-rule="evenodd" d="M0 0L__SVG_W__ 0L__SVG_W__ __SVG_H__L0 __SVG_H__Z__OUTLINE__"/>
+    <path id="edge" fill="none" stroke="#1F2823" stroke-width="1.5" stroke-opacity=".8" vector-effect="non-scaling-stroke" d="__OUTLINE__"/>
+    <g id="counties">__COUNTY_PATHS__</g>
+    <line id="link" x1="0" y1="0" x2="0" y2="0" stroke="#1B2420" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke" opacity="0"/>
+    <g id="truth" opacity="0">
+      <circle r="9" fill="none" stroke="#FFFFFF" stroke-width="4.5" vector-effect="non-scaling-stroke"/>
+      <circle r="9" fill="none" stroke="#1F2823" stroke-width="2.2" vector-effect="non-scaling-stroke"/>
+      <circle r="2.4" fill="#1F2823" stroke="#FFF" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+    </g>
+    <g id="pin" opacity="0">
+      <circle r="5" fill="#9B3B26" stroke="#FFF" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      <circle r="10" fill="none" stroke="#9B3B26" stroke-width="2" vector-effect="non-scaling-stroke"/>
+    </g>
+  </svg>
+</div>
+
+<div class="controls">
+  <button id="zout" class="zbtn" aria-label="Zoom out">&minus;</button>
+  <button id="zin" class="zbtn" aria-label="Zoom in">+</button>
+  <button id="reset">Fit state</button>
+</div>
+<button id="lock" class="primary" disabled>Lock it in</button>
+
+<div class="readout" id="readout"></div>
+<p class="hint">Drag to pan, pinch or scroll to zoom. Tap to drop a pin, then lock it in.</p>
+
+<div class="tape" id="tape"></div>
+<div id="final"></div>
+
+<p class="credits">Shaded relief built from Mapzen / AWS Terrain Tiles (USGS NED, SRTM). County and state
+boundaries from the US Census Bureau via us-atlas. Rivers, lakes and urban areas from Natural Earth.</p>
+</div>
+
+<script>
+const NAMES = __NAMES__;
+const CO = __CENT__;
+const MULT = [1,1,2,3,3];
+
+const EASY = ["Jefferson","Fayette","Kenton","Boone","Warren","Daviess","Hardin","Campbell","Christian","McCracken","Madison","Boyd","Pike","Laurel","Pulaski","Franklin"];
+const MID = ["Barren","Bullitt","Scott","Nelson","Oldham","Henderson","Whitley","Harlan","Bell","Floyd","Marshall","Muhlenberg","Shelby","Clark","Jessamine","Calloway","Perry","Letcher","Knox","Rowan","Montgomery","Grayson","Hopkins","Meade","Greenup","Carter","Woodford","Anderson","Logan","Clay"];
+const HARD = ["Robertson","Menifee","Elliott","Wolfe","Magoffin","Owsley","Lee","Nicholas","Gallatin","Bracken","Carlisle","Hickman","Livingston","Crittenden","Trimble","Cumberland","Metcalfe","Powell","Bath","Fleming","Spencer","Ballard","Hancock","Lyon","Bracken","Wolfe","Green","Casey","Jackson","Estill","Morgan","Martin","Leslie","Knott","Todd","Edmonson","Hart","Marion","Washington","Carroll","Pendleton","Harrison","Lewis","Menifee"];
+const have = new Set(NAMES);
+const pick = a => [...new Set(a.filter(n=>have.has(n)))];
+const TIER = [pick(EASY), pick(EASY.concat(MID)), pick(MID), pick(MID.concat(HARD)), pick(HARD)];
+
+function seedFor(d){let h=2166136261;for(const c of d)h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0}
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+const today = new Date();
+const iso = today.getFullYear()+"-"+String(today.getMonth()+1).padStart(2,"0")+"-"+String(today.getDate()).padStart(2,"0");
+document.getElementById("date").textContent = today.toLocaleDateString(undefined,{month:"long",day:"numeric"});
+
+const rand = rng(seedFor(iso));
+const puzzle = [];
+for(const t of TIER){
+  let n, guard=0;
+  do{ n = t[Math.floor(rand()*t.length)]; guard++; }while(puzzle.includes(n) && guard<80);
+  puzzle.push(n);
+}
+
+/* --- Web Mercator frame shared by the relief raster and every vector layer --- */
+const FR = __FRAME__;
+function svgToLonLat(x, y){
+  const gx = x/FR.k + FR.ox, gy = y/FR.k + FR.oy;
+  const lon = gx/FR.world*360 - 180;
+  const n = Math.PI*(1 - 2*gy/FR.world);
+  return [lon, Math.atan(Math.sinh(n))*180/Math.PI];
+}
+function milesBetween(a, b){
+  const R = 3958.7613, t = Math.PI/180;
+  const dLat = (b[1]-a[1])*t, dLon = (b[0]-a[0])*t;
+  const s = Math.sin(dLat/2)**2 + Math.cos(a[1]*t)*Math.cos(b[1]*t)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.min(1, Math.sqrt(s)));
+}
+
+const svg = document.getElementById("map");
+const gPin = document.getElementById("pin");
+const gTruth = document.getElementById("truth");
+const link = document.getElementById("link");
+const lockBtn = document.getElementById("lock");
+const readout = document.getElementById("readout");
+const tape = document.getElementById("tape");
+
+const FULL = {x:0, y:0, w:__SVG_W__, h:__SVG_H__};
+const MAX_ZOOM = 7;
+let view = {...FULL};
+let round = 0, scores = [], guess = null, done = false;
+
+/* Water is drawn in map units, so a plain stroke would grow 1:1 with zoom and
+   turn every creek into a canal. Damp it: on-screen width tracks zoom^0.35. */
+const riverGroups = [...document.querySelectorAll("#rivers > g")]
+  .map(g => ({g, w: parseFloat(g.getAttribute("stroke-width"))}));
+const lakeGroup = document.getElementById("lakes");
+function scaleWater(){
+  const k = Math.pow(FULL.w/view.w, -0.65);
+  for(const r of riverGroups) r.g.setAttribute("stroke-width", (r.w*k).toFixed(3));
+  lakeGroup.setAttribute("stroke-width", k.toFixed(3));
+}
+
+function setView(v){
+  const maxW = FULL.w, minW = FULL.w/MAX_ZOOM;
+  v.w = Math.min(maxW, Math.max(minW, v.w));
+  v.h = v.w * (FULL.h/FULL.w);
+  v.x = Math.min(FULL.x+FULL.w-v.w, Math.max(FULL.x, v.x));
+  v.y = Math.min(FULL.y+FULL.h-v.h, Math.max(FULL.y, v.y));
+  view = v;
+  svg.setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.h}`);
+  scaleWater();
+}
+/* zoom by f, holding the svg point at viewport fraction (fx,fy) still.
+   width is clamped up front so a zoom past the limit is a no-op instead of
+   sliding the view (setView would otherwise clamp w after x was derived). */
+function zoomAt(f, fx, fy){
+  const w = Math.min(FULL.w, Math.max(FULL.w/MAX_ZOOM, view.w/f));
+  const h = w*(FULL.h/FULL.w);
+  const ax = view.x + view.w*fx, ay = view.y + view.h*fy;
+  setView({x: ax - w*fx, y: ay - h*fy, w, h});
+}
+function zoomBy(f){ zoomAt(f, .5, .5); }
+document.getElementById("zin").onclick = ()=>zoomBy(1.8);
+document.getElementById("zout").onclick = ()=>zoomBy(1/1.8);
+document.getElementById("reset").onclick = ()=>setView({...FULL});
+
+function toSvg(cx, cy){
+  const p = svg.createSVGPoint(); p.x = cx; p.y = cy;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+function frac(cx, cy){
+  const r = svg.getBoundingClientRect();
+  return [(cx-r.left)/r.width, (cy-r.top)/r.height];
+}
+
+svg.addEventListener("wheel", e=>{
+  e.preventDefault();
+  const [fx,fy] = frac(e.clientX, e.clientY);
+  zoomAt(Math.pow(1.0022, -e.deltaY), fx, fy);
+}, {passive:false});
+
+let ptrs = new Map(), start = null, moved = false, pinch = null;
+svg.addEventListener("pointerdown", e=>{
+  svg.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===1){ start={x:e.clientX,y:e.clientY,view:{...view}}; moved=false; }
+  if(ptrs.size===2){
+    const [a,b]=[...ptrs.values()];
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    const p=toSvg(mx,my);
+    pinch={d:Math.hypot(a.x-b.x,a.y-b.y), view:{...view}, anchor:{x:p.x,y:p.y}};
+    moved=true;
+  }
+});
+svg.addEventListener("pointermove", e=>{
+  if(!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2 && pinch){
+    const [a,b]=[...ptrs.values()];
+    const f = Math.hypot(a.x-b.x,a.y-b.y)/pinch.d;
+    let w = pinch.view.w/f;
+    w = Math.min(FULL.w, Math.max(FULL.w/MAX_ZOOM, w));
+    const h = w*(FULL.h/FULL.w);
+    const [fx,fy] = frac((a.x+b.x)/2, (a.y+b.y)/2);
+    setView({x: pinch.anchor.x - w*fx, y: pinch.anchor.y - h*fy, w, h});
+    return;
+  }
+  if(!start) return;
+  const dx=e.clientX-start.x, dy=e.clientY-start.y;
+  if(Math.abs(dx)>5||Math.abs(dy)>5) moved=true;
+  if(!moved) return;
+  const scale = view.w / svg.getBoundingClientRect().width;
+  setView({x:start.view.x-dx*scale, y:start.view.y-dy*scale, w:start.view.w, h:start.view.h});
+});
+function endPtr(e){
+  const was = ptrs.size;
+  ptrs.delete(e.pointerId);
+  if(ptrs.size<2) pinch=null;
+  if(ptrs.size>=1){
+    /* a finger is still down: re-seed the pan origin so it does not jump */
+    const p=[...ptrs.values()][0];
+    start={x:p.x,y:p.y,view:{...view}}; moved=true;
+    return;
+  }
+  const tap = was===1 && !moved && !done;
+  start=null;
+  if(!tap) return;
+  const p = toSvg(e.clientX,e.clientY);
+  const el = document.elementFromPoint(e.clientX,e.clientY);
+  const county = (el && el.tagName==="path") ? el.dataset.n : null;
+  guess = {x:p.x, y:p.y, county};
+  gPin.setAttribute("transform",`translate(${p.x} ${p.y})`);
+  gPin.setAttribute("opacity","1");
+  lockBtn.disabled = false;
+  readout.innerHTML = `<span class="miles">Pin dropped. Move it or lock it in.</span>`;
+}
+svg.addEventListener("pointerup", endPtr);
+svg.addEventListener("pointercancel", endPtr);
+
+function scoreFor(mi, exact){
+  if(exact) return 100;
+  return Math.max(0, Math.round(100*Math.exp(-Math.pow(mi/60,1.3))));
+}
+
+function drawTape(){
+  tape.innerHTML = "";
+  for(let i=0;i<5;i++){
+    const d = document.createElement("div");
+    d.className = "cell" + (scores[i]===undefined?" pending":"") + (i===round&&!done?" now":"");
+    d.innerHTML = `<div class="n">&times;${MULT[i]}</div><div class="v">${scores[i]===undefined?"&middot;":scores[i]}</div>`;
+    tape.appendChild(d);
+  }
+}
+
+function startRound(){
+  guess = null;
+  gPin.setAttribute("opacity","0");
+  gTruth.setAttribute("opacity","0");
+  link.setAttribute("opacity","0");
+  document.querySelectorAll("#counties path.hit").forEach(p=>p.classList.remove("hit"));
+  document.getElementById("step").textContent = `Round ${round+1} of 5`;
+  document.getElementById("target").innerHTML = puzzle[round] + ` County<small>Tap where you think it is &middot; counts &times;${MULT[round]}</small>`;
+  lockBtn.textContent = "Lock it in";
+  lockBtn.disabled = true;
+  lockBtn.onclick = lockIn;
+  readout.innerHTML = "";
+  setView({...FULL});
+  drawTape();
+}
+
+function lockIn(){
+  const name = puzzle[round];
+  const c = CO[name];
+  const mi = milesBetween(svgToLonLat(guess.x, guess.y), [c.lon, c.lat]);
+  const exact = guess.county === name;
+  const s = scoreFor(mi, exact);
+  scores[round] = s;
+
+  document.querySelectorAll("#counties path").forEach(p=>{ if(p.dataset.n===name) p.classList.add("hit"); });
+  gTruth.setAttribute("transform",`translate(${c.x} ${c.y})`);
+  gTruth.setAttribute("opacity","1");
+  link.setAttribute("x1",guess.x); link.setAttribute("y1",guess.y);
+  link.setAttribute("x2",c.x); link.setAttribute("y2",c.y);
+  link.setAttribute("opacity", exact?"0":"1");
+
+  readout.innerHTML = exact
+    ? `<b>${s} points.</b> Dead on &mdash; you tapped inside ${name}.`
+    : `<b>${s} points.</b> <span class="miles">${mi<10?mi.toFixed(1):Math.round(mi)} miles off${guess.county?`, you landed in ${guess.county}`:""}.</span>`;
+
+  drawTape();
+  lockBtn.disabled = false;
+  lockBtn.textContent = round<4 ? "Next county" : "See your score";
+  lockBtn.onclick = ()=>{ round++; if(round<5) startRound(); else finish(); };
+}
+
+function emoji(s){ return s>=95?"\u{1F3AF}":s>=85?"\u{1F389}":s>=70?"\u{1F525}":s>=50?"\u{1F31F}":s>=25?"\u{1F914}":"\u{1F4A5}"; }
+
+function finish(){
+  done = true;
+  const total = scores.reduce((a,s,i)=>a+s*MULT[i],0);
+  document.getElementById("step").textContent = "Done";
+  document.getElementById("target").innerHTML = `That's the run<small>${iso}</small>`;
+  lockBtn.style.display = "none";
+  readout.innerHTML = "";
+  drawTape();
+  const share = `120.gg ${iso}\n` + scores.map(s=>`${s}${emoji(s)}`).join(" ") + `\nFinal score: ${total}`;
+  document.getElementById("final").innerHTML =
+    `<div class="final"><div class="big">${total}<span class="of"> / 1000</span></div>
+     <pre id="share">${share}</pre>
+     <button id="copy" style="width:100%">Copy result</button></div>`;
+  document.getElementById("copy").onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(share); document.getElementById("copy").textContent="Copied"; }
+    catch(e){ document.getElementById("copy").textContent="Select the text above to copy"; }
+  };
+}
+
+startRound();
+</script>
+</body>
+</html>
