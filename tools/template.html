@@ -54,6 +54,12 @@ svg#map{display:block;width:100%;height:auto;aspect-ratio:__SVG_W__ / __SVG_H__;
 .mapbox.revealing svg#map{cursor:grab}
 #pin,#truth,#link,#terrain,#urban,#water,#outside,#edge{pointer-events:none}
 #counties path{fill:transparent;pointer-events:all;stroke:#26302B;stroke-width:.75;stroke-opacity:.42;vector-effect:non-scaling-stroke}
+/* Counties already played stay marked for the rest of the run, so the map
+   builds up the day's five and you have landmarks to steer by in later
+   rounds. Same amber as the answer, turned well down: a quieter version of
+   the same mark reads as "done" where a second colour would read as a second
+   kind of thing. .hit comes after, so the round in play always wins. */
+#counties path.past{fill:rgba(228,169,60,.26);stroke:#2A2013;stroke-width:1.4;stroke-opacity:.7}
 #counties path.hit{fill:rgba(228,169,60,.45);stroke:#2A2013;stroke-width:2;stroke-opacity:1}
 /* Pill-shaped, and lifted off the page a little. Square corners on a panel
    the same colour as the card around it read as a box, not something to
@@ -738,6 +744,18 @@ function drawTape(){
   }
 }
 
+/* Every county answered so far, in order. The map is repainted from this
+   rather than left to accumulate classes, so there is one place that decides
+   what the map is showing. */
+const played = [];
+function paintPlayed(){
+  const seen = new Set(played);
+  document.querySelectorAll("#counties path").forEach(p=>{
+    p.classList.remove("hit");
+    p.classList.toggle("past", seen.has(p.dataset.n));
+  });
+}
+
 function startRound(){
   guess = null;
   revealing = false;
@@ -745,7 +763,7 @@ function startRound(){
   gPin.setAttribute("opacity","0");
   gTruth.setAttribute("opacity","0");
   link.setAttribute("opacity","0");
-  document.querySelectorAll("#counties path.hit").forEach(p=>p.classList.remove("hit"));
+  paintPlayed();
   document.getElementById("step").textContent = `Round ${round+1} of 5`;
   document.getElementById("target").textContent = puzzle[round] + " County";
   lockBtn.textContent = "Lock it in";
@@ -765,6 +783,7 @@ function lockIn(){
   document.querySelectorAll("#counties path").forEach(p=>{
     if(p.dataset.n===name){ p.classList.add("hit"); target = p; }
   });
+  if(!played.includes(name)) played.push(name);
   const edge = exact ? null : (target && nearestOnBorder(guess.x, guess.y, target.getAttribute("d")));
   const mi = exact ? 0
     : edge ? milesBetween(svgToLonLat(guess.x, guess.y), svgToLonLat(edge.x, edge.y))
@@ -895,6 +914,12 @@ function finish(){
   lockBtn.style.display = "none";
   readout.innerHTML = "";
   hideReveal();
+  /* the run is over, so no round is in play: all five sit at the same weight,
+     which is the map of the day you are left looking at */
+  paintPlayed();
+  gPin.setAttribute("opacity","0");
+  gTruth.setAttribute("opacity","0");
+  link.setAttribute("opacity","0");
   drawTape();
 
   const share = `countyashell.com ${iso}\n` + scores.map(s=>`${s}${emoji(s)}`).join(" ") + `\nFinal score: ${total}`;
