@@ -1329,11 +1329,17 @@ function closePop(d){
   else { d.removeAttribute("open"); d.dispatchEvent(new Event("close")); }
   releaseLock();
 }
-function wirePop(d, closer){
+function wirePop(d, closer, tapOutside){
   if(closer) closer.onclick = ()=>closePop(d);
   /* Esc and backdrop dismissal go through the dialog's own close event, so the
      scroll lock is released no matter how the sheet was dismissed. */
   d.addEventListener("close", releaseLock);
+  /* Tapping beside the sheet closes the welcome, where getting out of the way
+     is the whole point. The results do not take it: that sheet is the end of
+     the run and the only place the share button lives, and a stray tap while
+     reading down the five counties should not throw it away. The X is right
+     there, and it cannot be pressed by accident. */
+  if(!tapOutside) return;
   /* A click on the backdrop reports the dialog as its target — but so does a
      click on the dialog's own padding, so compare against the box instead. */
   d.addEventListener("click", e=>{
@@ -1353,7 +1359,7 @@ const openResults = ()=>openPop(dlg);
    dismissed. Every dismissal — button, X, Esc, backdrop — arrives as the
    dialog's close event, so the game is revealed exactly once per path. */
 const welcome = document.getElementById("welcome");
-wirePop(welcome, document.getElementById("welClose"));
+wirePop(welcome, document.getElementById("welClose"), true);
 /* The outline beats once the sheet is out of the way, and only before the
    very first pin — a returning player has already been told. Any touch of the
    map calls it off, including a pan that drops no pin. */
@@ -1471,7 +1477,7 @@ function finish(){
   });
 
   document.getElementById("final").innerHTML =
-    `<div class="final"><button id="reopen">See your results</button></div>`;
+    `<div class="final"><button id="reopen" class="primary">See your results</button></div>`;
   document.getElementById("reopen").onclick = openResults;
   openResults();
 }
