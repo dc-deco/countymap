@@ -658,9 +658,21 @@ function stateAt(x, y){
 }
 const MULT = [1,1,2,3,3];
 
-const EASY = ["Jefferson","Fayette","Kenton","Boone","Warren","Daviess","Hardin","Campbell","Christian","McCracken","Madison","Boyd","Pike","Laurel","Pulaski","Franklin"];
-const MID = ["Barren","Bullitt","Scott","Nelson","Oldham","Henderson","Whitley","Harlan","Bell","Floyd","Marshall","Muhlenberg","Shelby","Clark","Jessamine","Calloway","Perry","Letcher","Knox","Rowan","Montgomery","Grayson","Hopkins","Meade","Greenup","Carter","Woodford","Anderson","Logan","Clay"];
-const HARD = ["Robertson","Menifee","Elliott","Wolfe","Magoffin","Owsley","Lee","Nicholas","Gallatin","Bracken","Carlisle","Hickman","Livingston","Crittenden","Trimble","Cumberland","Metcalfe","Powell","Bath","Fleming","Spencer","Ballard","Hancock","Lyon","Bracken","Wolfe","Green","Casey","Jackson","Estill","Morgan","Martin","Leslie","Knott","Todd","Edmonson","Hart","Marion","Washington","Carroll","Pendleton","Harrison","Lewis","Menifee"];
+const EASY = ["Jefferson","Fayette","Kenton","Boone","Warren","Daviess","Hardin","Campbell",
+  "Christian","McCracken","Madison","Boyd","Pike","Laurel","Pulaski","Franklin"];
+const MID = ["Barren","Bullitt","Scott","Nelson","Oldham","Henderson","Whitley","Harlan",
+  "Bell","Floyd","Marshall","Muhlenberg","Shelby","Clark","Jessamine","Calloway","Perry",
+  "Letcher","Knox","Rowan","Montgomery","Grayson","Hopkins","Meade","Greenup","Carter",
+  "Woodford","Anderson","Logan","Clay","Boyle","Bourbon","Graves","Mercer","Taylor",
+  "Johnson","Mason","Grant","Union","Lincoln","Wayne","Breathitt","Lawrence","Ohio",
+  "Simpson"];
+const HARD = ["Robertson","Menifee","Elliott","Wolfe","Magoffin","Owsley","Lee","Nicholas",
+  "Gallatin","Bracken","Carlisle","Hickman","Livingston","Crittenden","Trimble",
+  "Cumberland","Metcalfe","Powell","Bath","Fleming","Spencer","Ballard","Hancock","Lyon",
+  "Green","Casey","Jackson","Estill","Morgan","Martin","Leslie","Knott","Todd","Edmonson",
+  "Hart","Marion","Washington","Carroll","Pendleton","Harrison","Lewis","Adair","Allen",
+  "Breckinridge","Butler","Caldwell","Clinton","Fulton","Garrard","Henry","Larue",
+  "McCreary","McLean","Monroe","Owen","Rockcastle","Russell","Trigg","Webster"];
 const have = new Set(NAMES);
 const pick = a => [...new Set(a.filter(n=>have.has(n)))];
 const TIER = [pick(EASY), pick(EASY.concat(MID)), pick(MID), pick(MID.concat(HARD)), pick(HARD)];
@@ -1033,7 +1045,7 @@ function verdict(mi, exact, target, landed, state){
 
   const band = BANDS.findIndex(([max]) => shown < max);
   const tone = BANDS[band][1];
-  const off = `${d} miles off as the crow flies.`;
+  const off = `${d} ${d === "1" ? "mile" : "miles"} off as the crow flies.`;
   /* the seams where a neighbour's outline does not quite meet Kentucky's are
      all within about a tenth of a mile of the border, so a tap that names no
      state at all was a near miss and reads as one */

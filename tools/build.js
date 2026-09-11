@@ -126,6 +126,22 @@ const subs = {
   __SHIELD_INK__: shield('shield-ink.webp'),
 };
 
+/* Every county must sit in exactly one difficulty tier, or it can never be
+   asked. Thirty-three of them were in none for a while, which no test could
+   see: the game ran fine and simply never mentioned them. */
+const tier = n => {
+  const m = html.match(new RegExp('const ' + n + ' = \\[(.*?)\\];', 's'));
+  if (!m) { console.error(`no ${n} tier in the template`); process.exit(1); }
+  return m[1].match(/"([^"]+)"/g).map(q => q.slice(1, -1));
+};
+const tiers = [...tier('EASY'), ...tier('MID'), ...tier('HARD')];
+const dupTier = tiers.filter((n, i) => tiers.indexOf(n) !== i);
+if (dupTier.length) { console.error('counties in more than one tier:', [...new Set(dupTier)]); process.exit(1); }
+const untiered = NAMES.filter(n => !tiers.includes(n));
+if (untiered.length) { console.error('counties in no tier, so never asked:', untiered); process.exit(1); }
+const ghost = tiers.filter(n => !CO[n]);
+if (ghost.length) { console.error('tier names that are not counties:', ghost); process.exit(1); }
+
 /* every county must carry a fact, or the reveal falls flat for that round */
 const noFact = NAMES.filter(n => !FACTS[n] || !String(FACTS[n]).trim());
 if (noFact.length) { console.error('counties missing a fact:', noFact); process.exit(1); }

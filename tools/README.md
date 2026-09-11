@@ -138,6 +138,25 @@ border-distance reference with `refcases.py`, which stores map coordinates.
 | 5 | `geom.js` | `counties.json` — projected county paths, interior points, lon/lat |
 | 6 | `water.js` | `water.json` — rivers, lakes, urban areas |
 
+## The daily five
+
+`EASY`, `MID` and `HARD` in the template are the draw. A day takes one county
+from EASY, one from EASY+MID, one from MID, one from MID+HARD and one from
+HARD, rejecting any it has already taken, seeded off the date — so everyone
+gets the same five and the same order.
+
+Between them the three tiers must name all 120 counties, exactly once each;
+`build.js` fails if any county is in none of them or in two. That check exists
+because 33 counties sat in no tier for a while, which nothing could catch from
+the outside: the game ran perfectly and simply never mentioned them.
+
+`node tools/rotation.js [days]` replays the shipped generator over consecutive
+dates and reports how often each county comes round and when the five first
+repeat. It measures the build rather than an idealised model, which matters:
+the tiers cut the space from the 190,578,024 sets a flat draw would give to
+about 55 million, and make an EASY county three times likelier on a given day
+than a HARD one.
+
 `facts.json` is hand-maintained, not generated — it is not part of this
 pipeline and survives a full map rebuild.
 
