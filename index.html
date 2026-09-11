@@ -60,6 +60,8 @@ h1 span{color:var(--ink-2);font-weight:400;letter-spacing:.02em;white-space:nowr
   .mapbox{margin-left:-12px;margin-right:-12px;border-left:0;border-right:0}
 }
 svg#map{display:block;width:100%;height:auto;aspect-ratio:2000 / 1600.83;cursor:crosshair}
+/* once locked in the map still pans and zooms, but no longer takes a pin */
+.mapbox.revealing svg#map{cursor:grab}
 #pin,#truth,#link,#terrain,#urban,#water,#outside,#edge{pointer-events:none}
 #counties path{fill:transparent;pointer-events:all;stroke:#26302B;stroke-width:.75;stroke-opacity:.42;vector-effect:non-scaling-stroke}
 #counties path.hit{fill:rgba(228,169,60,.45);stroke:#2A2013;stroke-width:2;stroke-opacity:1}
@@ -481,6 +483,7 @@ for(const type of ["gesturestart","gesturechange","gestureend"]){
   document.addEventListener(type, e=>e.preventDefault(), {passive:false});
 }
 
+const mapbox = document.querySelector(".mapbox");
 const svg = document.getElementById("map");
 const gPin = document.getElementById("pin");
 const gTruth = document.getElementById("truth");
@@ -508,7 +511,7 @@ function showReveal(name, scoreLine){
 const FULL = {x:0, y:0, w:2000, h:1600.83};
 const MAX_ZOOM = 7;
 let view = {...FULL};
-let round = 0, scores = [], exacts = [], guess = null, done = false;
+let round = 0, scores = [], exacts = [], guess = null, done = false, revealing = false;
 
 /* Water is drawn in map units, so a plain stroke would grow 1:1 with zoom and
    turn every creek into a canal. Damp it: on-screen width tracks zoom^0.35. */
@@ -602,7 +605,7 @@ function endPtr(e){
     start={x:p.x,y:p.y,view:{...view}}; moved=true;
     return;
   }
-  const tap = was===1 && !moved && !done;
+  const tap = was===1 && !moved && !done && !revealing;
   start=null;
   if(!tap) return;
   const p = toSvg(e.clientX,e.clientY);
@@ -693,6 +696,8 @@ function drawTape(){
 
 function startRound(){
   guess = null;
+  revealing = false;
+  mapbox.classList.remove("revealing");
   gPin.setAttribute("opacity","0");
   gTruth.setAttribute("opacity","0");
   link.setAttribute("opacity","0");
@@ -723,6 +728,10 @@ function lockIn(){
   const s = scoreFor(mi, exact);
   scores[round] = s;
   exacts[round] = exact;
+  /* the round is settled: panning and zooming stay live so the reveal can be
+     studied, but the map stops accepting pins */
+  revealing = true;
+  mapbox.classList.add("revealing");
   gTruth.setAttribute("transform",`translate(${c.x} ${c.y})`);
   gTruth.setAttribute("opacity","1");
   link.setAttribute("x1",guess.x); link.setAttribute("y1",guess.y);
