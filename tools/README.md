@@ -84,8 +84,8 @@ Run from a scratch directory; each step writes into it.
 The crop in `relief.py` (`CW,CE,CS,CN`) sets the frame's aspect ratio, and
 that ratio is what fixes the map's height on the page: the element is as wide
 as its column, and `aspect-ratio` does the rest. It is currently
-`-89.77, -81.77, 35.78, 39.86` — 8.00° of longitude by 4.08° of latitude,
-which projects to about 1.55:1. Kentucky is a 2.27:1 state, so a frame cropped
+`-89.72, -81.82, 35.33, 40.32` — 7.90° of longitude by 4.99° of latitude,
+which projects to about 1.25:1. Kentucky is a 2.27:1 state, so a frame cropped
 close to it makes for a short, wide map; the extra latitude buys vertical
 space on the page. Tighten the longitude margin and the state grows within
 the frame. Changing the crop means re-running steps 5-6 as well.

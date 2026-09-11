@@ -34,10 +34,10 @@ h1{font-size:15px;font-weight:700;letter-spacing:.05em;margin:0}
 h1 span{color:var(--ink-2);font-weight:400;letter-spacing:.02em;white-space:nowrap}
 .date{font-size:13px;color:var(--ink-2);white-space:nowrap;margin-left:auto}
 
-.prompt{margin:0 0 8px}
+.prompt{margin:0 0 6px}
 .step{font-size:12px;letter-spacing:.12em;color:var(--ink-2);margin:0 0 2px}
 .target{font-size:29px;line-height:1.08;font-weight:700;margin:0;letter-spacing:-.01em}
-.target small{font-size:14px;font-weight:400;color:var(--ink-2);letter-spacing:0;display:block;margin-top:2px}
+.target small{font-size:13px;font-weight:400;color:var(--ink-2);letter-spacing:0;display:block;margin-top:2px}
 /* sign-offs are sentences, not two-word county names, so they get a size
    that keeps them to two lines on a phone */
 .target.ending{font-size:24px;line-height:1.15}
@@ -222,7 +222,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
 
 <div class="prompt">
   <p class="step" id="step">Round 1 of 5</p>
-  <h2 class="target" id="target">&nbsp;<small id="sub">Tap where you think it is</small></h2>
+  <h2 class="target" id="target">&nbsp;</h2>
 </div>
 
 <div class="mapbox">
@@ -579,7 +579,7 @@ function startRound(){
   link.setAttribute("opacity","0");
   document.querySelectorAll("#counties path.hit").forEach(p=>p.classList.remove("hit"));
   document.getElementById("step").textContent = `Round ${round+1} of 5`;
-  document.getElementById("target").innerHTML = puzzle[round] + ` County<small>Tap where you think it is &middot; counts &times;${MULT[round]}</small>`;
+  document.getElementById("target").textContent = puzzle[round] + " County";
   lockBtn.textContent = "Lock it in";
   lockBtn.disabled = true;
   lockBtn.onclick = lockIn;
