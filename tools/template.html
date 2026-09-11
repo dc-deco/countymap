@@ -907,6 +907,7 @@ function startRound(){
   guess = null;
   revealing = false;
   stopFlight();
+  stopDrift();
   mapbox.classList.remove("revealing");
   gPin.setAttribute("opacity","0");
   gTruth.setAttribute("opacity","0");
@@ -1122,11 +1123,46 @@ wirePop(welcome, document.getElementById("welClose"));
 const edgePath = document.getElementById("edge");
 function stopBeat(){ edgePath.classList.remove("beat"); }
 function maybeBeat(){ if(round === 0 && !guess && !done) edgePath.classList.add("beat"); }
-svg.addEventListener("pointerdown", stopBeat);
+
+/* The map also settles into place rather than simply being there: it starts a
+   little tight and off to one side and glides out to the full frame, which
+   says the surface moves in a way a static picture of a map never will.
+
+   It animates the real view rather than nudging the element with a transform,
+   so the client-to-map coordinate maths stays true at every frame — a tap
+   landing mid-glide has to resolve to the right county. Grabbing the map
+   stops it where it is instead of snapping: that view is a legal one, and it
+   is the one the hand is already on. Its own frame handle, kept away from the
+   reveal's, or a pointerdown during a reveal would cancel that animation. */
+let drift = null;
+function stopDrift(){
+  if(drift !== null){ cancelAnimationFrame(drift); drift = null; }
+}
+function driftIn(){
+  if(reduceMotion.matches || round !== 0 || guess || done) return;
+  stopDrift();
+  const k = 0.84, w = FULL.w * k;
+  const from = {x: FULL.x + (FULL.w - w) * 0.76, y: FULL.y + (FULL.h - FULL.h * k) * 0.44, w};
+  const dur = 950, t0 = performance.now();
+  setView({...from});
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur), e = easeOut(t);
+    setView({x: from.x + (FULL.x - from.x) * e,
+             y: from.y + (FULL.y - from.y) * e,
+             w: from.w + (FULL.w - from.w) * e});
+    if(t < 1){ drift = requestAnimationFrame(step); return; }
+    drift = null;
+    setView({...FULL});
+  };
+  drift = requestAnimationFrame(step);
+}
+
+svg.addEventListener("pointerdown", ()=>{ stopBeat(); stopDrift(); });
 
 welcome.addEventListener("close", ()=>{
   document.documentElement.classList.remove("intro");
   maybeBeat();
+  driftIn();
 });
 document.getElementById("welGo").onclick = ()=>closePop(welcome);
 document.getElementById("howto").onclick = ()=>{
