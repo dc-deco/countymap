@@ -69,13 +69,22 @@ h1{font-size:15px;font-weight:700;letter-spacing:.05em;margin:0}
    that keeps them to two lines on a phone */
 .target.ending{font-size:24px;line-height:1.15}
 
-.mapbox{position:relative;background:#93A48C;border:1px solid #46524B;overflow:hidden;touch-action:none}
+.mapbox{position:relative;background:#93A48C;border:1px solid #46524B;overflow:hidden;touch-action:none;
+  display:flex;align-items:center;justify-content:center;
+  /* The frame carries terrain well past Kentucky, and on a short screen that
+     margin is the first thing that can go. Capping the box clips the frame
+     top and bottom — the state stays centred and the same size — rather than
+     pushing Lock it in off the bottom of the page. 340px is everything else
+     the screen has to hold. */
+  max-height:calc(100vh - 340px);
+  max-height:calc(100dvh - 340px);
+}
 /* below the wrap's max width the column is the screen, so let the map reach
    the edges: wider map, and by its fixed aspect ratio, a taller one too */
 @media (max-width:543px){
   .mapbox{margin-left:-12px;margin-right:-12px;border-left:0;border-right:0}
 }
-svg#map{display:block;width:100%;height:auto;aspect-ratio:__SVG_W__ / __SVG_H__;cursor:crosshair}
+svg#map{display:block;flex:0 0 100%;width:100%;height:auto;aspect-ratio:__SVG_W__ / __SVG_H__;cursor:crosshair}
 /* once locked in the map still pans and zooms, but no longer takes a pin */
 .mapbox.revealing svg#map{cursor:grab}
 #pin,#truth,#link,#terrain,#urban,#water,#outside,#edge{pointer-events:none}
@@ -801,6 +810,10 @@ const STATE_HEADS = {
   "Missouri":      "Missouri. You crossed the Mississippi.",
   "North Carolina":"North Carolina. You cleared the mountains.",
   "Arkansas":      "Arkansas. You're a state too far west.",
+  "Georgia":       "Georgia. You went straight through Tennessee.",
+  "Alabama":       "Alabama. That's a whole different south.",
+  "Mississippi":   "Mississippi. Bless it, but no.",
+  "South Carolina":"South Carolina. You're past the mountains and gone.",
 };
 function verdict(mi, exact, target, landed, state){
   const d = milesLabel(mi);

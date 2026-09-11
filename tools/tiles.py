@@ -1,7 +1,7 @@
 import math, json, os
 Z = 10
 W, E = -90.30, -81.30
-S, N = 36.00, 39.65
+S, N = 34.45, 41.10
 def lon2x(lon,z): return (lon+180.0)/360.0*(2**z)
 def lat2y(lat,z):
     r=math.radians(lat)

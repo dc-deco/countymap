@@ -16,7 +16,7 @@ def lon2px(l): return (l+180.0)/360.0*(2**Z)*256
 def lat2px(l):
     r=math.radians(l); return (1.0-math.log(math.tan(r)+1/math.cos(r))/math.pi)/2.0*(2**Z)*256
 ox,oy=S['x0']*256,S['y0']*256
-CW,CE,CS,CN=-90.05,-81.55,36.22,39.42
+CW,CE,CS,CN=-89.72,-81.82,34.5125,41.0759
 cx0,cx1=int(round(lon2px(CW)-ox)),int(round(lon2px(CE)-ox))
 cy0,cy1=int(round(lat2px(CN)-oy)),int(round(lat2px(CS)-oy))
 elev=elev[cy0:cy1,cx0:cx1]; h,w=elev.shape
@@ -43,9 +43,9 @@ img=np.clip(base*(0.50+0.70*shade[...,None]),0,255).astype(np.uint8)
 out=Image.fromarray(img)
 json.dump(dict(W=CW,E=CE,S=CS,N=CN,px_w=w,px_h=h,z=Z,org_x=ox+cx0,org_y=oy+cy0),
           open('frame.json','w'),indent=1)
-for tw in (2400,2048):
+for tw in (1680,):
     th=int(round(tw*h/w)); r=out.resize((tw,th),Image.LANCZOS)
-    for q in (70,78):
+    for q in (72,):
         p=f"relief_{tw}_{q}.webp"; r.save(p,"WEBP",quality=q,method=6)
         print(f"  {tw}x{th} q{q}: {os.path.getsize(p)/1024:.0f} KB (b64 {os.path.getsize(p)*4/3/1024:.0f} KB)")
 out.resize((1500,int(round(1500*h/w))),Image.LANCZOS).save("preview.png")

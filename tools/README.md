@@ -63,6 +63,10 @@ coordinate arrays rather than SVG paths. Nine states fall inside the frame,
 node tools/states.js
 ```
 
+Thirteen states fall inside the current frame. Each one the reveal can name
+needs a line in `STATE_HEADS` in the template, or it falls back to naming
+itself.
+
 Tolerance is safe because one CSS pixel is about 140 m even at full zoom, so
 no seam it leaves along a state line is reachable with a finger. Where a
 neighbour's outline does not quite meet Kentucky's — the Ohio and Mississippi
@@ -110,18 +114,27 @@ Run from a scratch directory; each step writes into it.
 | step | script | output |
 | --- | --- | --- |
 | 1 | `tiles.py` | tile list + `dem/meta.json` for the Kentucky bbox |
-| 2 | `curl -K dem/urls.txt --parallel` | 390 Terrarium elevation tiles (z10, ~19 MB) |
+| 2 | `curl -K dem/urls.txt --parallel` | 650 Terrarium elevation tiles (z10, ~30 MB) |
 | 3 | `mosaic.py` | `elev.npy` — stitched, despeckled elevation grid |
 | 4 | `relief.py` | `relief_*.webp` + `frame.json` — hillshade & tint |
 
 The crop in `relief.py` (`CW,CE,CS,CN`) sets the frame's aspect ratio, and
 that ratio is what fixes the map's height on the page: the element is as wide
 as its column, and `aspect-ratio` does the rest. It is currently
-`-89.72, -81.82, 35.33, 40.32` — 7.90° of longitude by 4.99° of latitude,
-which projects to about 1.25:1. Kentucky is a 2.27:1 state, so a frame cropped
-close to it makes for a short, wide map; the extra latitude buys vertical
-space on the page. Tighten the longitude margin and the state grows within
-the frame. Changing the crop means re-running steps 5-6 as well.
+`-89.72, -81.82, 34.5125, 41.0759` — 7.90° of longitude by 6.56° of latitude,
+which projects to about 0.95:1.
+
+The longitude is not a free parameter. Kentucky fills 96.3% of the frame's
+width and only 40% of its height, so the state is width-limited: at phone
+width it is already drawn as large as the screen allows, and no crop makes it
+bigger without cutting it off. Latitude is the only lever, and all it buys is
+page height — more terrain above and below the same Kentucky. That is still
+worth having, because the alternative is empty page.
+
+The DEM bbox in `tiles.py` has to cover the crop with room to spare; it
+currently runs 34.45-41.10N, two tile rows past each edge. Changing the crop
+means re-running steps 5-6 and `states.js` as well, and regenerating the
+border-distance reference with `refcases.py`, which stores map coordinates.
 | 5 | `geom.js` | `counties.json` — projected county paths, interior points, lon/lat |
 | 6 | `water.js` | `water.json` — rivers, lakes, urban areas |
 
@@ -130,6 +143,11 @@ pipeline and survives a full map rebuild.
 
 Copy `frame.json`, `counties.json`, `water.json` and the chosen
 `relief_*.webp` (as `relief.webp`) into `tools/data/`, then run `build.js`.
+
+`relief.py` renders at 1680px wide, which is about 3 megapixels — the budget
+that keeps the inlined WebP near 300 KB. A taller crop means a narrower render
+for the same bytes; 1680 is still 27% oversampled against a 440pt map on a 3x
+phone.
 
 `frame.json` is the contract between the raster and the vectors: it pins the
 Web Mercator origin and zoom, so `geom.js`, `water.js` and the in-page
