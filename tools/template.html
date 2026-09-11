@@ -374,6 +374,21 @@ const FACTS = __FACTS__;
    first. They are never drawn — they exist so a tap that misses Kentucky can
    still be told where it landed. See tools/states.js. */
 const STATES = __STATES__;
+/* Kentucky by geometry rather than by hit testing. elementFromPoint answers
+   nearly always, but a tap landing exactly on a shared county edge can come
+   back with nothing, and since a pin outside Kentucky now scores zero, a
+   wrong "nothing" would cost a player the round. Costs 0.1 ms, and only runs
+   when the hit test came up empty. */
+const countyPaths = [...document.querySelectorAll("#counties path")];
+const canTestFill = typeof SVGGeometryElement !== "undefined"
+  && !!SVGGeometryElement.prototype.isPointInFill;
+function countyAt(x, y){
+  if(!canTestFill) return null;
+  const pt = new DOMPoint(x, y);
+  for(const p of countyPaths) if(p.isPointInFill(pt)) return p.dataset.n;
+  return null;
+}
+
 /* Even-odd ray cast across every ring of a state, which handles the holes and
    the river islands without treating them specially. */
 function stateAt(x, y){
@@ -576,7 +591,8 @@ function endPtr(e){
   if(!tap) return;
   const p = toSvg(e.clientX,e.clientY);
   const el = document.elementFromPoint(e.clientX,e.clientY);
-  const county = (el && el.tagName==="path") ? el.dataset.n : null;
+  const hit = (el && el.tagName==="path") ? el.dataset.n : null;
+  const county = hit || countyAt(p.x, p.y);
   /* only worth asking when the pin missed Kentucky, which is the only time
      the reveal has anything to say about it */
   guess = {x:p.x, y:p.y, county, state: county ? null : stateAt(p.x, p.y)};
@@ -738,7 +754,9 @@ function lockIn(){
   const mi = exact ? 0
     : edge ? milesBetween(svgToLonLat(guess.x, guess.y), svgToLonLat(edge.x, edge.y))
            : milesBetween(svgToLonLat(guess.x, guess.y), [c.lon, c.lat]);
-  const s = scoreFor(mi, exact);
+  /* outside Kentucky is worth nothing, however near the line it landed —
+     the game asks for a county, and out there you did not name one */
+  const s = guess.county ? scoreFor(mi, exact) : 0;
   scores[round] = s;
   exacts[round] = exact;
   /* the round is settled: panning and zooming stay live so the reveal can be
