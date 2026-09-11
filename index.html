@@ -36,19 +36,19 @@ body{
   padding:16px 12px 40px;
 }
 .wrap{width:100%;max-width:520px}
-/* no wrap: the date stays pinned top-right and the title wraps inside .brand
-   instead of pushing the date onto a line of its own */
-header{display:flex;align-items:flex-start;justify-content:space-between;
-  gap:2px 12px;margin-bottom:8px}
-.brand{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
-.brand .linky{font-size:13px}
+/* Two thin rows over the county name: the game's name and the date, then the
+   way in and where you are. No tagline — by the time this is on screen you
+   are looking at a map of Kentucky ringed with Kentucky route markers, and
+   the masthead does not need to explain the product to you. */
+header{margin-bottom:4px}
+.hrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 h1{font-size:15px;font-weight:700;letter-spacing:.05em;margin:0}
-h1 span{color:var(--ink-2);font-weight:400;letter-spacing:.02em;white-space:nowrap}
-.date{font-size:13px;color:var(--ink-2);white-space:nowrap;margin-left:auto}
-
-.prompt{margin:0 0 6px}
-.step{font-size:12px;letter-spacing:.12em;color:var(--ink-2);margin:0 0 2px}
-.target{font-size:29px;line-height:1.08;font-weight:700;margin:0;letter-spacing:-.01em}
+.hrow .linky{font-size:13px}
+/* the date and the round sit in the same small-caps voice, so the two right
+   edges read as one column rather than two unrelated notes */
+.date,.step{font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-2);margin:0;white-space:nowrap;flex:0 0 auto}
+.target{font-size:29px;line-height:1.08;font-weight:700;margin:2px 0 6px;letter-spacing:-.01em}
 /* sign-offs are sentences, not two-word county names, so they get a size
    that keeps them to two lines on a phone */
 .target.ending{font-size:24px;line-height:1.15}
@@ -322,17 +322,17 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
 <body>
 <div class="wrap">
 <header>
-  <div class="brand">
-    <h1>County As Hell <span>A Kentucky Map Game</span></h1>
-    <button class="linky" id="howto">How to play</button>
+  <div class="hrow">
+    <h1>County As Hell</h1>
+    <div class="date" id="date"></div>
   </div>
-  <div class="date" id="date"></div>
+  <div class="hrow">
+    <button class="linky" id="howto">How to play</button>
+    <p class="step" id="step">Round 1 / 5</p>
+  </div>
 </header>
 
-<div class="prompt">
-  <p class="step" id="step">Round 1 of 5</p>
-  <h2 class="target" id="target">&nbsp;</h2>
-</div>
+<h2 class="target" id="target">&nbsp;</h2>
 
 <div class="mapbox">
   <svg id="map" viewBox="0 0 2000 1600.83" role="application" aria-label="Shaded relief map of Kentucky and its counties">
@@ -583,7 +583,9 @@ function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t
 
 const today = new Date();
 const iso = today.getFullYear()+"-"+String(today.getMonth()+1).padStart(2,"0")+"-"+String(today.getDate()).padStart(2,"0");
-document.getElementById("date").textContent = today.toLocaleDateString(undefined,{month:"long",day:"numeric"});
+/* short month: "September 11" ate a surprising amount of a phone's width
+   for something nobody reads twice */
+document.getElementById("date").textContent = today.toLocaleDateString(undefined,{month:"short",day:"numeric"});
 
 const rand = rng(seedFor(iso));
 const puzzle = [];
@@ -965,7 +967,7 @@ function startRound(){
   gTruth.setAttribute("opacity","0");
   link.setAttribute("opacity","0");
   paintPlayed();
-  document.getElementById("step").textContent = `Round ${round+1} of 5`;
+  document.getElementById("step").textContent = `Round ${round+1} / 5`;
   document.getElementById("target").textContent = puzzle[round] + " County";
   lockBtn.textContent = "Lock it in";
   lockBtn.disabled = true;
