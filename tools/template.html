@@ -11,6 +11,7 @@ __FONT_CSS__
   --line:#A9B5AF; --line-2:#7C8A84;
   --grass:#43703C; --madder:#9B3B26;
   --shell:#D9DFDB; --amber:#E4A93C;
+  --shield-fill:url("__SHIELD_FILL__"); --shield-ink:url("__SHIELD_INK__");
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 __BACKDROP_CSS__
@@ -107,7 +108,7 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
   transition:opacity .28s ease, transform .28s ease, visibility 0s .28s;
 }
 /* The rows the card covers are hidden rather than left underneath it: the
-   current chip's dark fill was bleeding out past the card's rounded edge, and
+   current marker's fill was bleeding out past the card's rounded edge, and
    a half-covered strip reads as a rendering bug. They cross-fade with the
    card, since a pop behind a half-transparent card is worse than either. */
 .readout,.tape{transition:opacity .34s ease, visibility 0s}
@@ -140,24 +141,57 @@ body.revealing .readout,body.revealing .tape{
 .credits{font-size:10px;line-height:1.4;color:var(--line);margin-top:6px;max-width:34em}
 
 /* Progress strip: which round you are on, what each is worth, and what you
-   scored. A pending slot shows its round number, the current one is filled,
-   and a played one is replaced by its score. */
-.tape{display:flex;gap:6px;margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
-.cell{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
-.chip{
-  width:100%;height:30px;border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:14px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;
-  border:1px solid var(--line);color:var(--line-2);background:transparent;
+   scored. Each slot is a blank Kentucky route marker with the number in the
+   field where a route number goes — a pending slot carries its round number,
+   a played one its score. The markers carry the strip on their own, so the
+   divider rule above them is gone.
+
+   Each is two stacked alpha masks cut from the sign art, the shape and the
+   legend, painted separately: one flat image could not go green on a dead-on
+   guess, and the states are the whole point of the strip. --sw is the only
+   size knob; everything inside is derived from it. */
+.tape{--sw:52px;display:flex;gap:6px;margin-top:10px;padding-top:2px}
+/* below the narrowest phone the cell, not the knob, sets the width; drop the
+   marker so a 3-digit score cannot outgrow the field it sits in */
+@media (max-width:329px){.tape{--sw:44px}}
+.cell{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.shield{
+  position:relative;width:min(100%,var(--sw));aspect-ratio:1069/1135;
+  background:var(--panel);transform-origin:50% 60%;
+  -webkit-mask:var(--shield-fill) center/contain no-repeat;
+          mask:var(--shield-fill) center/contain no-repeat;
+  opacity:.34;
+  transition:opacity .22s ease,background-color .22s ease,filter .22s ease,transform .22s ease;
 }
-.cell.now .chip{background:var(--ink);border-color:var(--ink);color:var(--paper)}
-.cell.done .chip{background:var(--shell);border-color:var(--line-2);color:var(--ink)}
-.cell.hit .chip{background:var(--grass);border-color:var(--grass);color:#fff}
-/* a played round that is still the current one keeps a ring instead of the
-   fill, so its score stays readable */
-.cell.done.now .chip{box-shadow:0 0 0 2px var(--ink)}
-.mult{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--line-2)}
-.cell.now .mult,.cell.done .mult{color:var(--ink-2)}
+.shield::after{
+  content:"";position:absolute;inset:0;background:var(--ink);
+  -webkit-mask:var(--shield-ink) center/contain no-repeat;
+          mask:var(--shield-ink) center/contain no-repeat;
+  transition:background-color .22s ease;
+}
+/* the field below the KENTUCKY band is widest around 63% of the sign's height
+   and holds about 0.7 of its width there, which a 3-digit score just fits */
+.num{
+  position:absolute;left:8%;right:8%;top:63%;transform:translateY(-50%);
+  text-align:center;line-height:1;font-weight:700;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;font-size:calc(var(--sw)*.34);
+  color:var(--ink);
+}
+/* Played and current markers stand at full strength; the rounds still to come
+   sit back at a third. That contrast is what marks where you are, so the
+   current one only needs lifting off the page a little. */
+.cell.now .shield,.cell.done .shield{opacity:1}
+/* and the one you are on stands a little closer, the way the next sign down
+   the road does */
+.cell.now .shield{transform:scale(1.09);filter:drop-shadow(0 2px 3px rgba(20,28,24,.38))}
+/* dead on: the sign goes green and its legend goes light, the way a marker
+   you actually hit ought to look */
+.cell.hit .shield{background:var(--grass)}
+.cell.hit .shield::after{background:var(--panel)}
+.cell.hit .num{color:#fff}
+.mult{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--line)}
+.cell.now .mult{color:var(--ink)}
+.cell.done .mult{color:var(--ink-2)}
 
 dialog.pop{
   /* a modal dialog is centred by the UA in the top layer; hand-positioning it
@@ -574,14 +608,17 @@ function drawTape(){
     const cell = document.createElement("div");
     cell.className = "cell" + (played ? " done" : "") + (current ? " now" : "")
                    + (played && exacts[i] ? " hit" : "");
-    const chip = document.createElement("div");
-    chip.className = "chip";
-    chip.textContent = played ? String(scores[i]) : String(i + 1);
+    const shield = document.createElement("div");
+    shield.className = "shield";
+    const num = document.createElement("span");
+    num.className = "num";
+    num.textContent = played ? String(scores[i]) : String(i + 1);
+    shield.appendChild(num);
     const mult = document.createElement("div");
     mult.className = "mult";
     mult.textContent = "\u00D7" + MULT[i];
-    cell.append(chip, mult);
-    /* the chip alone reads as a bare number, so spell the slot out for
+    cell.append(shield, mult);
+    /* the marker alone reads as a bare number, so spell the slot out for
        screen readers */
     cell.setAttribute("role", "listitem");
     const worth = MULT[i] === 1 ? "counts once" : MULT[i] === 2 ? "counts double" : "counts triple";

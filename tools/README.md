@@ -52,6 +52,22 @@ python3 tools/backdrop.py tools/data/welcome.jpeg tools/data/welcome.webp \
 Remove the file and the sheet simply renders without an image. The copy
 itself lives in `tools/template.html`.
 
+The progress strip draws a blank Kentucky route marker per round. Unlike the
+images above these are required, and they are masks rather than pictures: the
+strip has to colour a marker four ways (still to come, current, played, dead
+on), which one flat image cannot do. `tools/shield.py` cuts two alpha masks
+out of the sign art — `shield-fill.webp` for the shape and `shield-ink.webp`
+for the outlines and the word KENTUCKY — cropped to the sign's own bounding
+box, so the CSS box needs no padding fudge:
+
+```sh
+python3 tools/shield.py tools/data/Highway.jpeg tools/data
+```
+
+It prints the aspect ratio it cropped to; that number is the `aspect-ratio`
+on `.shield` in the template and has to move with the art. Size and colour of
+the markers are CSS only — `--sw` on `.tape` is the single size knob.
+
 Type is Lato, self-hosted from `tools/data/fonts/` and inlined as data URIs,
 so the page makes no request to Google Fonts. Refresh the files with:
 

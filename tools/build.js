@@ -46,6 +46,18 @@ const fontCss = FONTS.map(([w,f]) => {
          `src:url(data:font/woff2;base64,${fs.readFileSync(fp).toString('base64')}) format("woff2")}`;
 }).filter(Boolean).join('\n');
 
+/* The progress strip's route markers. Two alpha masks cut from the sign art
+   (see tools/shield.py): one for the shape, one for the legend, so the strip
+   can colour a marker per state instead of showing one flat picture. */
+const shield = n => {
+  const f = path.join(DATA, n);
+  if (!fs.existsSync(f)) {
+    console.error(`missing ${n} — run: python3 tools/shield.py`);
+    process.exit(1);
+  }
+  return uriFor(f);
+};
+
 /* Welcome sheet header. Optional: with no file the sheet simply has no image. */
 const welcomeFile = pick(['welcome.webp','welcome.jpg','welcome.jpeg','welcome.png']);
 const welcomeImg = welcomeFile
@@ -108,6 +120,8 @@ const subs = {
   __BACKDROP_CSS__: backdropCss,
   __FONT_CSS__: fontCss,
   __WELCOME_IMG__: welcomeImg,
+  __SHIELD_FILL__: shield('shield-fill.webp'),
+  __SHIELD_INK__: shield('shield-ink.webp'),
 };
 
 /* every county must carry a fact, or the reveal falls flat for that round */
@@ -124,6 +138,8 @@ console.log(`wrote ${OUT}  ${(fs.statSync(OUT).size/1024).toFixed(0)} KB`);
 console.log(`  ${NAMES.length} counties, ${W.rivers.length} river segs, ${W.lakes.length} lakes, ${W.urban.length} urban`);
 console.log(`  relief ${(webp.length/1024).toFixed(0)} KB webp -> ${(webp.length*4/3/1024).toFixed(0)} KB base64`);
 console.log(`  fonts ${FONTS.length} weights inlined, ${(fontCss.length/1024).toFixed(0)} KB css`);
+console.log(`  shields ${['shield-fill.webp','shield-ink.webp']
+  .map(n => (fs.statSync(path.join(DATA,n)).size/1024).toFixed(1)+' KB').join(' + ')}`);
 console.log(welcomeFile
   ? `  welcome ${path.basename(welcomeFile)} ${(fs.statSync(welcomeFile).size/1024).toFixed(0)} KB`
   : '  welcome image none');
