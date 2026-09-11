@@ -73,7 +73,8 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
   background:rgba(244,246,244,.93);border:1px solid var(--line-2);
   box-shadow:0 1px 4px rgba(20,28,24,.24);
 }
-#lock{width:100%;margin-top:10px}
+.lockslot{position:relative;margin-top:10px}
+#lock{width:100%}
 .primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .primary:active{background:#2F3B35}
 .primary:disabled{background:var(--shell);color:var(--line-2);border-color:var(--line)}
@@ -81,22 +82,25 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
 .readout{margin-top:12px;min-height:23px;font-size:15px}
 .readout b{font-weight:700}
 .readout .miles{color:var(--ink-2)}
-/* The reveal sits over the map instead of in the flow: the old inline fact
-   box pushed the strip and footer down the page on every guess. Anchored to
-   the bottom so the highlighted county stays visible above it where it fits,
-   and collapsible to a bar when it does not. touch-action is restored here
-   because .mapbox sets none for its own gestures, which would also kill
-   scrolling inside this card. */
+/* The reveal is out of the flow so locking in shifts nothing on the page. It
+   starts at the top of the Lock it in slot and grows downward over the rows
+   beneath, leaving the whole map clear. */
 .reveal{
-  position:absolute;left:0;right:0;bottom:0;z-index:3;
-  max-height:100%;display:flex;flex-direction:column;touch-action:pan-y;
-  padding:10px 12px 12px;
-  background:rgba(244,246,244,.975);border-top:1px solid var(--line-2);
-  box-shadow:0 -6px 18px rgba(20,28,24,.16);
+  position:absolute;left:0;right:0;top:0;z-index:5;
+  display:flex;flex-direction:column;touch-action:pan-y;
+  max-height:min(58vh,420px);
+  padding:12px 13px 13px;border-radius:12px;
+  background:var(--panel);border:1px solid var(--line-2);
+  box-shadow:0 10px 28px rgba(20,28,24,.22);
 }
 /* display:flex outranks the [hidden] attribute, same trap the results dialog
    hit — without this the card never hides */
 .reveal[hidden]{display:none}
+/* The rows the card covers are hidden rather than left underneath it: the
+   current chip's dark fill was bleeding out past the card's rounded edge, and
+   a half-covered strip reads as a rendering bug. visibility, not display, so
+   nothing on the page moves. */
+body.revealing .readout,body.revealing .tape{visibility:hidden}
 /* only the text scrolls; Next county stays pinned, or on a short screen with
    a long fact the primary action lands below the fold inside the card */
 .revealbody{flex:1 1 auto;min-height:0;overflow-y:auto}
@@ -250,6 +254,10 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
     <button id="zin" aria-label="Zoom in">+</button>
     <button id="zout" aria-label="Zoom out">&minus;</button>
   </div>
+</div>
+
+<div class="lockslot">
+  <button id="lock" class="primary" disabled>Lock it in</button>
   <div class="reveal" id="reveal" hidden>
     <div class="revealbody">
       <p class="rline" id="revealScore"></p>
@@ -258,8 +266,6 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
     <button id="nextBtn" class="primary">Next county</button>
   </div>
 </div>
-
-<button id="lock" class="primary" disabled>Lock it in</button>
 
 <div class="readout" id="readout"></div>
 <div class="tape" id="tape" role="list" aria-label="Round progress"></div>
@@ -373,6 +379,12 @@ function showReveal(name, scoreLine){
   revealFact.textContent = f || "";
   revealBox.querySelector(".revealbody").scrollTop = 0;
   revealBox.hidden = false;
+  document.body.classList.add("revealing");
+}
+
+function hideReveal(){
+  revealBox.hidden = true;
+  document.body.classList.remove("revealing");
 }
 
 const FULL = {x:0, y:0, w:__SVG_W__, h:__SVG_H__};
@@ -525,12 +537,12 @@ function verdict(mi, exact, target, landed){
      alongside the under-15 line while a true 15 gets a different one */
   const shown = Number(d);
   if(exact)       return `Dead on. You're standing in ${target}.`;
-  if(!landed)     return `${d} miles off &mdash; you're not even in Kentucky.`;
-  if(shown < 5)   return `${d} miles off. You're in ${landed}, close enough to wave at ${target}.`;
-  if(shown < 18)  return `${d} miles off. You pulled up in ${landed}.`;
-  if(shown < 45)  return `${d} miles off. Right neck of the woods, wrong county &mdash; that's ${landed}.`;
-  if(shown < 100) return `${d} miles off. That's ${landed}, and it's a fair drive from ${target}.`;
-  return `${d} miles off. You're way out in ${landed}.`;
+  if(!landed)     return `${d} miles off as the crow flies &mdash; you're not even in Kentucky.`;
+  if(shown < 5)   return `${d} miles off as the crow flies. You're in ${landed}, close enough to wave at ${target}.`;
+  if(shown < 18)  return `${d} miles off as the crow flies. You pulled up in ${landed}.`;
+  if(shown < 45)  return `${d} miles off as the crow flies. Right neck of the woods, wrong county &mdash; that's ${landed}.`;
+  if(shown < 100) return `${d} miles off as the crow flies. That's ${landed}, and it's a fair drive from ${target}.`;
+  return `${d} miles off as the crow flies. You're way out in ${landed}.`;
 }
 
 function drawTape(){
@@ -575,7 +587,7 @@ function startRound(){
   lockBtn.disabled = true;
   lockBtn.onclick = lockIn;
   readout.innerHTML = "";
-  revealBox.hidden = true;
+  hideReveal();
   setView({...FULL});
   drawTape();
 }
@@ -717,7 +729,7 @@ function finish(){
   target.appendChild(stamp);
   lockBtn.style.display = "none";
   readout.innerHTML = "";
-  revealBox.hidden = true;
+  hideReveal();
   drawTape();
 
   const share = `countyashell.com ${iso}\n` + scores.map(s=>`${s}${emoji(s)}`).join(" ") + `\nFinal score: ${total}`;
