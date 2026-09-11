@@ -99,6 +99,16 @@ svg#map{display:block;flex:0 0 100%;width:100%;height:auto;aspect-ratio:2000 / 2
 /* once locked in the map still pans and zooms, but no longer takes a pin */
 .mapbox.revealing svg#map{cursor:grab}
 #pin,#truth,#link,#terrain,#urban,#water,#outside,#edge{pointer-events:none}
+/* First arrival only: the state outline swells twice. A beacon or a pointing
+   hand has to sit somewhere, and anywhere it sits on this map reads as a hint
+   about the answer — the outline is the whole target, so it can say "this is
+   the thing" without saying "here". */
+@keyframes edgebeat{
+  0%,100%{stroke-width:1.5;stroke-opacity:.8}
+  50%    {stroke-width:3.6;stroke-opacity:1}
+}
+#edge.beat{animation:edgebeat 1.4s ease-in-out 2}
+@media (prefers-reduced-motion: reduce){#edge.beat{animation:none}}
 /* the answer's fill fades up as the line lands on it, and the round before
    it fades back down to goldenrod as the next one starts */
 #counties path{fill:transparent;pointer-events:all;stroke:#26302B;stroke-width:.75;stroke-opacity:.42;vector-effect:non-scaling-stroke;
@@ -826,6 +836,7 @@ function endPtr(e){
   /* only worth asking when the pin missed Kentucky, which is the only time
      the reveal has anything to say about it */
   guess = {x:p.x, y:p.y, county, state: county ? null : stateAt(p.x, p.y)};
+  stopBeat();
   gPin.setAttribute("transform",`translate(${p.x} ${p.y})`);
   gPin.setAttribute("opacity","1");
   lockBtn.disabled = false;
@@ -1036,7 +1047,10 @@ function startRound(){
   lockBtn.textContent = "Lock it in";
   lockBtn.disabled = true;
   lockBtn.onclick = lockIn;
-  readout.innerHTML = "";
+  /* the row is reserved whether or not it has anything in it, so spend it
+     telling a first-timer what to do — there is nothing else on the screen
+     that says the map is the input, and it clears on the first tap */
+  readout.innerHTML = `<span class="miles">Tap the map to drop your pin.</span>`;
   hideReveal();
   setView({...FULL});
   drawTape();
@@ -1232,7 +1246,18 @@ const openResults = ()=>openPop(dlg);
    dialog's close event, so the game is revealed exactly once per path. */
 const welcome = document.getElementById("welcome");
 wirePop(welcome, document.getElementById("welClose"));
-welcome.addEventListener("close", ()=>document.documentElement.classList.remove("intro"));
+/* The outline beats once the sheet is out of the way, and only before the
+   very first pin — a returning player has already been told. Any touch of the
+   map calls it off, including a pan that drops no pin. */
+const edgePath = document.getElementById("edge");
+function stopBeat(){ edgePath.classList.remove("beat"); }
+function maybeBeat(){ if(round === 0 && !guess && !done) edgePath.classList.add("beat"); }
+svg.addEventListener("pointerdown", stopBeat);
+
+welcome.addEventListener("close", ()=>{
+  document.documentElement.classList.remove("intro");
+  maybeBeat();
+});
 document.getElementById("welGo").onclick = ()=>closePop(welcome);
 document.getElementById("howto").onclick = ()=>{
   document.documentElement.classList.add("intro");
