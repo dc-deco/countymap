@@ -104,14 +104,32 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
   background:var(--panel);border:1px solid var(--line-2);
   box-shadow:0 10px 28px rgba(20,28,24,.22);
 }
-/* display:flex outranks the [hidden] attribute, same trap the results dialog
-   hit — without this the card never hides */
-.reveal[hidden]{display:none}
+/* Hidden by visibility rather than display:none, which cancels transitions
+   outright — display:flex outranking [hidden] was the original trap here, and
+   this settles it the same way while leaving something to fade. The card is
+   out of the flow, so parking it there costs no layout. The visibility switch
+   is delayed by the fade-out so the card is still painted while it goes. */
+.reveal{
+  opacity:1;
+  transition:opacity .34s ease, transform .34s cubic-bezier(.22,.61,.36,1), visibility 0s;
+}
+.reveal[hidden]{
+  visibility:hidden;opacity:0;transform:translateY(-7px);pointer-events:none;
+  transition:opacity .28s ease, transform .28s ease, visibility 0s .28s;
+}
 /* The rows the card covers are hidden rather than left underneath it: the
    current chip's dark fill was bleeding out past the card's rounded edge, and
-   a half-covered strip reads as a rendering bug. visibility, not display, so
-   nothing on the page moves. */
-body.revealing .readout,body.revealing .tape{visibility:hidden}
+   a half-covered strip reads as a rendering bug. They cross-fade with the
+   card, since a pop behind a half-transparent card is worse than either. */
+.readout,.tape{transition:opacity .34s ease, visibility 0s}
+body.revealing .readout,body.revealing .tape{
+  visibility:hidden;opacity:0;
+  transition:opacity .28s ease, visibility 0s .28s;
+}
+@media (prefers-reduced-motion: reduce){
+  .reveal,.reveal[hidden],.readout,.tape,
+  body.revealing .readout,body.revealing .tape{transition:none}
+}
 /* only the text scrolls; Next county stays pinned, or on a short screen with
    a long fact the primary action lands below the fold inside the card */
 .revealbody{flex:1 1 auto;min-height:0;overflow-y:auto}
