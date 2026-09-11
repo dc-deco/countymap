@@ -69,10 +69,9 @@ h1{font-size:15px;font-weight:700;letter-spacing:.05em;margin:0}
    that keeps them to two lines on a phone */
 .target.ending{font-size:24px;line-height:1.15}
 
-/* the ground behind the frame, seen only in the band an over-pull opens at
-   the edge: quiet enough not to read as a green wall, dark enough to say the
-   map has run out */
-.mapbox{position:relative;background:#C6CDC0;border:1px solid #46524B;overflow:hidden;touch-action:none;
+/* paper, which is what the bleed above is mixed into — and what backs the map
+   before the relief decodes */
+.mapbox{position:relative;background:var(--paper);border:1px solid #46524B;overflow:hidden;touch-action:none;
   display:flex;align-items:center;justify-content:center;
   /* The frame carries terrain well past Kentucky, and on a short screen that
      margin is the first thing that can go. Capping the box clips the frame
@@ -90,7 +89,14 @@ h1{font-size:15px;font-weight:700;letter-spacing:.05em;margin:0}
 svg#map{display:block;flex:0 0 100%;width:100%;height:auto;aspect-ratio:__SVG_W__ / __SVG_H__;cursor:crosshair}
 /* once locked in the map still pans and zooms, but no longer takes a pin */
 .mapbox.revealing svg#map{cursor:grab}
-#pin,#truth,#link,#terrain,#urban,#water,#outside,#edge{pointer-events:none}
+#pin,#truth,#link,#terrain,#bleed,#urban,#water,#outside,#edge{pointer-events:none}
+/* The band first came out greener than the map beside it, because everything
+   outside Kentucky is washed with 60% paper and the bleed sat under the map,
+   not under that wash. Same recipe here instead: 40% terrain over paper. No
+   blur — side by side the sharp copy read better, the faint detail carrying
+   the eye across the seam, and a filter over a surface this size is work the
+   phone does not need to do mid-drag. */
+#bleed{opacity:.4}
 /* First arrival only: the state outline swells twice. A beacon or a pointing
    hand has to sit somewhere, and anywhere it sits on this map reads as a hint
    about the answer — the outline is the whole target, so it can say "this is
@@ -402,6 +408,11 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
 
 <div class="mapbox">
   <svg id="map" viewBox="0 0 __SVG_W__ __SVG_H__" role="application" aria-label="Shaded relief map of Kentucky and its counties">
+    <!-- The band an over-pull opens at an edge. A flat fill could only ever
+         match one edge of a hillshade, so this is the relief itself, drawn
+         once more underneath at 113% — referenced, not repeated, so it costs
+         no bytes — and far enough out to cover the deepest pull. -->
+    <use id="bleed" href="#terrain" transform="translate(-130 -137) scale(1.13)"/>
     <image id="terrain" x="0" y="0" width="__SVG_W__" height="__SVG_H__" preserveAspectRatio="none" href="__TERRAIN__"/>
     <g id="urban" fill="#8E8578" fill-opacity=".38">__URBAN__</g>
     <g id="water">
