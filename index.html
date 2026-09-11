@@ -799,13 +799,60 @@ function nearestOnBorder(px, py, d){
    since adjacency is never computed, and no direction, since the guess can
    sit on any side. `landed` is null when the tap missed Kentucky entirely. */
 const BANDS = [
-  [10,  "Damn near perfect.",            "good"],
-  [30,  "Right down the road.",          ""],
-  [75,  "Not half bad.",                 ""],
-  [150, "A ways off.",                   ""],
-  [225, "Wrong end of the Commonwealth.",""],
-  [Infinity, "Bless your heart.",        "bad"],
+  [10, "good", [
+    "Damn near perfect.", "Close enough for government work.",
+    "Might as well count it.", "Right on top of it.", "Just about dead on.",
+    "You were right there.", "Couldn't get much closer."]],
+  [30, "", [
+    "Right down the road.", "Just up the road.", "Pretty dang close.",
+    "In the neighborhood.", "You're warm.", "Just a county or two over.",
+    "Close enough to know better."]],
+  [75, "", [
+    "Not half bad.", "You're in the ballpark.", "Close-ish.",
+    "You've got the general idea.", "Same neck of the woods.",
+    "Could've been worse.", "We'll allow it."]],
+  [150, "", [
+    "A ways off.", "You've drifted a bit.", "Not exactly next door.",
+    "That's a bit of a drive.", "You're getting cold.",
+    "Wrong neck of the woods.", "Pack a lunch."]],
+  [225, "", [
+    "Wrong end of the Commonwealth.", "You've got some driving to do.",
+    "Clear across Kentucky.", "Not even close, bud.",
+    "You took a wrong turn somewhere.", "Might wanna check the map.",
+    "That's a haul."]],
+  [Infinity, "bad", [
+    "Bless your heart.", "Good Lord.", "Nowhere near it.", "You lost?",
+    "Well, you tried.", "Wrong Kentucky, apparently.",
+    "We're gonna pretend that didn't happen.", "Lord have mercy."]],
 ];
+const EXACT_HEADS = [
+  "Nailed it.", "Dead on.", "That's the one.", "Bullseye.",
+  "Well I'll be damned.", "You know your counties.", "Right where it oughta be."];
+
+/* One fixed line per band would wear out by the third day. Each band deals
+   from a shuffled deck instead and only reshuffles once the deck is spent, so
+   a line cannot come round again until every other one in its band has been
+   used — no repeats inside a run, and no run that opens the same way as the
+   last one. The refill will not deal the line it just dealt. */
+function deck(lines){
+  let rest = [], last = null;
+  return () => {
+    if(!rest.length){
+      rest = lines.slice();
+      for(let i = rest.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        [rest[i], rest[j]] = [rest[j], rest[i]];
+      }
+      if(rest.length > 1 && rest[rest.length - 1] === last) {
+        [rest[rest.length - 1], rest[0]] = [rest[0], rest[rest.length - 1]];
+      }
+    }
+    return (last = rest.pop());
+  };
+}
+const bandHead = BANDS.map(([,, lines]) => deck(lines));
+const exactHead = deck(EXACT_HEADS);
+
 /* Miss the state and the state gets the headline — it is a better joke than
    the distance is. Anything in the frame without a line of its own falls back
    to naming itself. */
@@ -827,17 +874,18 @@ function verdict(mi, exact, target, landed, state){
   /* band on the number actually shown, so 9.96 does not print "10 miles off"
      under the under-10 headline while a true 10 gets the next one down */
   const shown = Number(d);
-  if(exact) return {head:"Nailed it.", tone:"good",
+  if(exact) return {head: exactHead(), tone:"good",
     line:`Dead on. You're standing in ${target}.`};
 
-  const [, head, tone] = BANDS.find(([max]) => shown < max);
+  const band = BANDS.findIndex(([max]) => shown < max);
+  const tone = BANDS[band][1];
   const off = `${d} miles off as the crow flies.`;
   /* the seams where a neighbour's outline does not quite meet Kentucky's are
      all within about a tenth of a mile of the border, so a tap that names no
      state at all was a near miss and reads as one */
   if(!landed) return {
     head: state ? (STATE_HEADS[state] || `That's ${state}.`) : "Not even Kentucky.",
-    tone: "",
+    tone: "",  /* drawn from no deck: the state is the joke, not the distance */
     line: shown < 30
       ? `${off} Close, but we asked about Kentucky.`
       : `${off} ${target}'s back over in Kentucky.`};
@@ -849,7 +897,7 @@ function verdict(mi, exact, target, landed, state){
     shown < 150 ? `You put it in ${landed}, a tank of gas from ${target}.` :
     shown < 225 ? `You're in ${landed}. ${target} is a whole other part of the state.`
                 : `You're in ${landed}, and ${target} is nowhere near it.`;
-  return {head, tone, line:`${off} ${rib}`};
+  return {head: bandHead[band](), tone, line:`${off} ${rib}`};
 }
 
 function drawTape(){
