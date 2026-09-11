@@ -49,7 +49,6 @@ h1 span{color:var(--ink-2);font-weight:400;letter-spacing:.02em;white-space:nowr
 .prompt{margin:0 0 6px}
 .step{font-size:12px;letter-spacing:.12em;color:var(--ink-2);margin:0 0 2px}
 .target{font-size:29px;line-height:1.08;font-weight:700;margin:0;letter-spacing:-.01em}
-.target small{font-size:13px;font-weight:400;color:var(--ink-2);letter-spacing:0;display:block;margin-top:2px}
 /* sign-offs are sentences, not two-word county names, so they get a size
    that keeps them to two lines on a phone */
 .target.ending{font-size:24px;line-height:1.15}
@@ -1175,9 +1174,6 @@ function finish(){
   const target = document.getElementById("target");
   target.classList.add("ending");
   target.textContent = endingFor(total);
-  const stamp = document.createElement("small");
-  stamp.textContent = iso;
-  target.appendChild(stamp);
   lockBtn.style.display = "none";
   readout.innerHTML = "";
   hideReveal();
