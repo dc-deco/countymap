@@ -294,8 +294,11 @@ dialog.pop .step{margin:0 0 2px}
 .resverdict{font-size:24px;line-height:1.12;font-weight:700;letter-spacing:-.01em;margin:0 0 8px;padding-right:36px}
 dialog.pop .big{font-size:44px;font-weight:700;letter-spacing:-.01em;line-height:1;margin:0}
 dialog.pop #copy{width:100%}
-.rechead{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);
-  font-weight:700;margin:22px 0 0;border-top:1px solid var(--line);padding-top:12px}
+/* The one section head left, in the welcome sheet. At 11px and .12em it was
+   spelling the words out a letter at a time; at 17px bold with a hair of
+   tracking it reads in one go, in the same ink as the button below it. */
+.sechead{font-size:17px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink);
+  font-weight:700;margin:18px 0 0;border-top:1px solid var(--line);padding-top:14px}
 /* County, what it paid, how far off you were, then the fact. No rules between
    the five — the gap between them does that work, and five hairlines under a
    pill button read as a table nobody asked for. */
@@ -310,6 +313,12 @@ dialog.pop #copy{width:100%}
 .rfact{margin:7px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2)}
 /* full-bleed header: cancel the sheet's padding so the sign meets the edges */
 .welcomeimg{display:block;width:calc(100% + 36px);height:auto;margin:-20px -18px 16px}
+/* on a short phone the sign is what pushes Let's go under the fold, so crop
+   it rather than make the first thing anyone does a scroll */
+@media (max-height:620px){
+  .welcomeimg{height:96px;object-fit:cover;object-position:center 42%;margin-bottom:12px}
+  .sechead{margin-top:14px;padding-top:11px}
+}
 .weltitle{font-size:clamp(16px,4.9vw,20px);line-height:1.25;font-weight:700;letter-spacing:-.01em;margin:0 0 4px}
 /* blocks, so each line holds at any width rather than depending on where the
    text happens to wrap. Only the first line clears the close button — giving
@@ -404,7 +413,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <div class="sheet">
   __WELCOME_IMG__
   <h2 class="weltitle" id="welTitle"><span class="ln">Hey Y'all</span> <span class="ln">Welcome to County As Hell,</span> a Kentucky map game.</h2>
-  <h3 class="rechead" style="margin-top:14px">Do what now?</h3>
+  <h3 class="sechead">Do what now?</h3>
   <p class="body">Every day, we&#39;ll give you 5 of Kentucky&#39;s 120 counties. You tell us where
   the hell they are.</p>
   <p class="body">Poke around the map and drop your pin. Think you&#39;ve got it? Lock it in.</p>
