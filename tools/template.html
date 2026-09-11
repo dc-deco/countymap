@@ -22,7 +22,7 @@ body{
   font-family:Lato,'Helvetica Neue',Helvetica,Arial,system-ui,sans-serif;
   font-size:16px; line-height:1.5;
   display:flex; justify-content:center;
-  padding:16px 12px 40px;
+  padding:16px 12px 24px;
 }
 .wrap{width:100%;max-width:520px}
 /* Two thin rows over the county name: the game's name and the date, then the
@@ -101,7 +101,9 @@ dialog.pop:focus,dialog.pop:focus-visible{outline:none}
 .primary:active{background:#2F3B35;box-shadow:0 1px 2px rgba(20,28,24,.2)}
 .primary:disabled{background:var(--shell);color:var(--line-2);border-color:var(--line)}
 
-.readout{margin-top:12px;min-height:23px;font-size:15px}
+/* the height is reserved so dropping a pin does not shove the strip down,
+   but it does not need a full 15px line to hold a one-line hint */
+.readout{margin-top:8px;min-height:19px;font-size:13px}
 .readout b{font-weight:700}
 .readout .miles{color:var(--ink-2)}
 /* The reveal is out of the flow so locking in shifts nothing on the page. It
@@ -164,11 +166,16 @@ body.revealing .readout,body.revealing .tape{
 .rfactline .lede{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--line-2);font-weight:700;margin-bottom:1px}
 .reveal #nextBtn{flex:0 0 auto;width:100%;margin-top:9px;padding:9px 12px}
-.byline{font-size:13px;color:var(--ink-2);margin:16px 0 0;border-top:1px solid var(--line);padding-top:10px}
+/* One quiet line. The credits moved into How to play — they are a courtesy to
+   the data, not something the game needs to say on every screen — and the
+   rule above this went with them: the strip already ends the page, and a
+   full-width hairline under it made a footer out of a signature. */
+.byline{font-size:12px;color:var(--line-2);margin:14px 0 0}
 .byline a{color:var(--ink);font-weight:700;text-decoration:underline;
   text-underline-offset:2px;text-decoration-color:var(--line-2)}
 .byline a:hover,.byline a:focus-visible{text-decoration-color:var(--ink)}
-.credits{font-size:10px;line-height:1.4;color:var(--line);margin-top:6px;max-width:34em}
+.credits{font-size:11px;line-height:1.45;color:var(--line-2);margin:16px 0 0;
+  border-top:1px solid var(--line);padding-top:12px}
 
 /* Progress strip: which round you are on, what each is worth, and what you
    scored. Each slot is a blank Kentucky route marker with the number in the
@@ -378,6 +385,8 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <p class="body">Poke around the map and drop your pin. Think you&#39;ve got it? Lock it in.</p>
   <p class="body">Come back tomorrow for 5 more. Lord knows we&#39;ve got enough of &#39;em.</p>
   <button id="welGo" class="primary">Let&#39;s go</button>
+  <p class="credits">Relief: USGS &amp; SRTM via Mapzen Terrain Tiles &middot; Boundaries: US Census &middot;
+  Water and urban areas: Natural Earth</p>
   </div>
 </dialog>
 
@@ -394,8 +403,6 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
 </dialog>
 
 <p class="byline">A Kentucky map game by <a href="https://dandecoste.com" target="_blank" rel="noopener noreferrer">Dan DeCoste</a></p>
-<p class="credits">Relief: USGS &amp; SRTM via Mapzen Terrain Tiles &middot; Boundaries: US Census &middot;
-Water and urban areas: Natural Earth</p>
 </div>
 
 <script>
