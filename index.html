@@ -64,7 +64,11 @@ svg#map{display:block;width:100%;height:auto;aspect-ratio:2000 / 1600.83;cursor:
 /* once locked in the map still pans and zooms, but no longer takes a pin */
 .mapbox.revealing svg#map{cursor:grab}
 #pin,#truth,#link,#terrain,#urban,#water,#outside,#edge{pointer-events:none}
-#counties path{fill:transparent;pointer-events:all;stroke:#26302B;stroke-width:.75;stroke-opacity:.42;vector-effect:non-scaling-stroke}
+/* the answer's fill fades up as the line lands on it, and the round before
+   it fades back down to goldenrod as the next one starts */
+#counties path{fill:transparent;pointer-events:all;stroke:#26302B;stroke-width:.75;stroke-opacity:.42;vector-effect:non-scaling-stroke;
+  transition:fill .28s ease,stroke-opacity .28s ease,stroke-width .28s ease}
+@media (prefers-reduced-motion: reduce){#counties path{transition:none}}
 /* Counties already played stay marked for the rest of the run, so the map
    builds up the day's five and you have landmarks to steer by in later
    rounds. Muted goldenrod, a half step duller and browner than the amber the
@@ -894,6 +898,7 @@ function paintPlayed(){
 function startRound(){
   guess = null;
   revealing = false;
+  stopFlight();
   mapbox.classList.remove("revealing");
   gPin.setAttribute("opacity","0");
   gTruth.setAttribute("opacity","0");
@@ -910,13 +915,74 @@ function startRound(){
   drawTape();
 }
 
+/* Locking in is the moment the round pays off, so it gets a beat: the line
+   runs out from your pin to the answer, the marker drops on it, the county
+   lights up, and the card follows. Every value the animation touches is also
+   written at the end of it, so stopping mid-flight still leaves a correct
+   map — which matters, because Next county can be pressed while it runs. */
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+let flight = null;
+function stopFlight(){
+  if(flight !== null){ cancelAnimationFrame(flight); flight = null; }
+}
+function frames(dur, draw, then){
+  const t0 = performance.now();
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur);
+    draw(t);
+    if(t < 1){ flight = requestAnimationFrame(step); return; }
+    flight = null;
+    then();
+  };
+  flight = requestAnimationFrame(step);
+}
+function revealAnswer(from, to, drawLine, onLand){
+  stopFlight();
+  const land = () => {
+    gTruth.setAttribute("opacity", "1");
+    onLand();
+    if(reduceMotion.matches){ gTruth.setAttribute("transform", `translate(${to.x} ${to.y})`); return; }
+    /* the marker arrives a little large and settles, which reads as landing
+       rather than switching on */
+    frames(260, t => {
+      const k = t < .55 ? 0.2 + 0.98 * easeOut(t / .55)
+                        : 1.18 - 0.18 * easeOut((t - .55) / .45);
+      gTruth.setAttribute("transform", `translate(${to.x} ${to.y}) scale(${k.toFixed(3)})`);
+    }, () => gTruth.setAttribute("transform", `translate(${to.x} ${to.y})`));
+  };
+
+  if(!drawLine || reduceMotion.matches){
+    link.setAttribute("x2", to.x); link.setAttribute("y2", to.y);
+    link.setAttribute("stroke-dashoffset", 0);
+    land();
+    return;
+  }
+  const dist = Math.hypot(to.x - from.x, to.y - from.y);
+  /* a short hop would crawl on a fixed duration and a cross-state miss would
+     blur past on one; the square root keeps both about as quick as they look */
+  const dur = Math.min(460, 200 + Math.sqrt(dist) * 8);
+  link.setAttribute("x2", from.x); link.setAttribute("y2", from.y);
+  frames(dur, t => {
+    const e = easeOut(t);
+    link.setAttribute("x2", from.x + (to.x - from.x) * e);
+    link.setAttribute("y2", from.y + (to.y - from.y) * e);
+    /* the dashes travel with the line instead of sitting still inside it */
+    link.setAttribute("stroke-dashoffset", (-26 * e).toFixed(1));
+  }, () => {
+    link.setAttribute("x2", to.x); link.setAttribute("y2", to.y);
+    link.setAttribute("stroke-dashoffset", 0);
+    land();
+  });
+}
+
 function lockIn(){
   const name = puzzle[round];
   const c = CO[name];
   const exact = guess.county === name;
   let target = null;
   document.querySelectorAll("#counties path").forEach(p=>{
-    if(p.dataset.n===name){ p.classList.add("hit"); target = p; }
+    if(p.dataset.n===name) target = p;
   });
   if(!played.includes(name)) played.push(name);
   const edge = exact ? null : (target && nearestOnBorder(guess.x, guess.y, target.getAttribute("d")));
@@ -933,13 +999,16 @@ function lockIn(){
   revealing = true;
   mapbox.classList.add("revealing");
   gTruth.setAttribute("transform",`translate(${c.x} ${c.y})`);
-  gTruth.setAttribute("opacity","1");
   link.setAttribute("x1",guess.x); link.setAttribute("y1",guess.y);
-  link.setAttribute("x2",c.x); link.setAttribute("y2",c.y);
   link.setAttribute("opacity", exact?"0":"1");
 
   readout.innerHTML = "";
-  showReveal(name, s, verdict(mi, exact, name, guess.county, guess.state));
+  const v = verdict(mi, exact, name, guess.county, guess.state);
+  /* a dead-on guess has nowhere to fly, so it lands at once */
+  revealAnswer(guess, c, !exact, ()=>{
+    if(target) target.classList.add("hit");
+    showReveal(name, s, v);
+  });
   drawTape();
   /* Lock it in has done its job; advancing now belongs to the card, so the
      button below the map stops changing identity mid-round. */
@@ -1051,6 +1120,7 @@ function finish(){
   hideReveal();
   /* the run is over, so no round is in play: all five sit at the same weight,
      which is the map of the day you are left looking at */
+  stopFlight();
   paintPlayed();
   gPin.setAttribute("opacity","0");
   gTruth.setAttribute("opacity","0");
