@@ -27,22 +27,27 @@ body{
 /* no wrap: the date stays pinned top-right and the title wraps inside .brand
    instead of pushing the date onto a line of its own */
 header{display:flex;align-items:flex-start;justify-content:space-between;
-  gap:2px 12px;margin-bottom:14px}
+  gap:2px 12px;margin-bottom:8px}
 .brand{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
 .brand .linky{font-size:13px}
 h1{font-size:15px;font-weight:700;letter-spacing:.05em;margin:0}
 h1 span{color:var(--ink-2);font-weight:400;letter-spacing:.02em;white-space:nowrap}
 .date{font-size:13px;color:var(--ink-2);white-space:nowrap;margin-left:auto}
 
-.prompt{margin:0 0 10px}
+.prompt{margin:0 0 8px}
 .step{font-size:12px;letter-spacing:.12em;color:var(--ink-2);margin:0 0 2px}
-.target{font-size:38px;line-height:1.05;font-weight:700;margin:0;letter-spacing:-.01em}
-.target small{font-size:15px;font-weight:400;color:var(--ink-2);letter-spacing:0;display:block;margin-top:2px}
+.target{font-size:29px;line-height:1.08;font-weight:700;margin:0;letter-spacing:-.01em}
+.target small{font-size:14px;font-weight:400;color:var(--ink-2);letter-spacing:0;display:block;margin-top:2px}
 /* sign-offs are sentences, not two-word county names, so they get a size
    that keeps them to two lines on a phone */
-.target.ending{font-size:30px;line-height:1.1}
+.target.ending{font-size:24px;line-height:1.15}
 
 .mapbox{position:relative;background:#93A48C;border:1px solid #46524B;overflow:hidden;touch-action:none}
+/* below the wrap's max width the column is the screen, so let the map reach
+   the edges: wider map, and by its fixed aspect ratio, a taller one too */
+@media (max-width:543px){
+  .mapbox{margin-left:-12px;margin-right:-12px;border-left:0;border-right:0}
+}
 svg#map{display:block;width:100%;height:auto;aspect-ratio:__SVG_W__ / __SVG_H__;cursor:crosshair}
 #pin,#truth,#link,#terrain,#urban,#water,#outside,#edge{pointer-events:none}
 #counties path{fill:transparent;pointer-events:all;stroke:#26302B;stroke-width:.75;stroke-opacity:.42;vector-effect:non-scaling-stroke}
@@ -55,10 +60,18 @@ button:active{background:var(--shell)}
 button:disabled{color:var(--line-2);cursor:default}
 button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
 
-.controls{display:flex;gap:8px;margin-top:10px}
-.zbtn{flex:1;padding:11px 0;line-height:1}
-.zbtn .g{font-size:18px;vertical-align:-1px;margin-right:5px}
-#lock{width:100%;margin-top:8px}
+/* Top-left, which is the one corner of the default view that holds no
+   Kentucky at any of the widths the page renders at — the old on-map buttons
+   sat bottom-right and swallowed taps on Pike. Verified clear at 360-600px. */
+.mapzoom{position:absolute;top:10px;left:10px;z-index:2;display:flex;flex-direction:column;gap:6px}
+.mapzoom button{
+  width:34px;height:34px;padding:0;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:19px;line-height:1;font-weight:700;
+  background:rgba(244,246,244,.93);border:1px solid var(--line-2);
+  box-shadow:0 1px 4px rgba(20,28,24,.24);
+}
+#lock{width:100%;margin-top:10px}
 .primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .primary:active{background:#2F3B35}
 .primary:disabled{background:var(--shell);color:var(--line-2);border-color:var(--line)}
@@ -195,12 +208,12 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
       <circle r="10" fill="none" stroke="#9B3B26" stroke-width="2" vector-effect="non-scaling-stroke"/>
     </g>
   </svg>
+  <div class="mapzoom">
+    <button id="zin" aria-label="Zoom in">+</button>
+    <button id="zout" aria-label="Zoom out">&minus;</button>
+  </div>
 </div>
 
-<div class="controls">
-  <button id="zout" class="zbtn"><span class="g">&minus;</span>Zoom out</button>
-  <button id="zin" class="zbtn"><span class="g">+</span>Zoom in</button>
-</div>
 <button id="lock" class="primary" disabled>Lock it in</button>
 
 <div class="readout" id="readout"></div>
