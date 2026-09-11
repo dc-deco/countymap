@@ -23,8 +23,10 @@ body{
   font-size:16px; line-height:1.5;
   display:flex; justify-content:center;
   padding:16px 12px 24px;
+  /* full height so the slack on a tall screen has somewhere to be put */
+  min-height:100vh; min-height:100dvh;
 }
-.wrap{width:100%;max-width:520px}
+.wrap{width:100%;max-width:520px;display:flex;flex-direction:column}
 /* Two thin rows over the county name: the game's name and the date, then the
    way in and where you are. No tagline — by the time this is on screen you
    are looking at a map of Kentucky ringed with Kentucky route markers, and
@@ -32,12 +34,33 @@ body{
 header{margin-bottom:4px}
 .hrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 h1{font-size:15px;font-weight:700;letter-spacing:.05em;margin:0}
-.hrow .linky{font-size:13px}
+.brandline{display:flex;align-items:center;gap:7px;min-width:0}
+/* the way in, as a mark rather than a sentence: "How to play" spent a whole
+   row saying something a question mark says in 20px */
+.helpbtn{
+  width:20px;height:20px;padding:0;border-radius:50%;flex:0 0 auto;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;line-height:1;
+  background:transparent;border:1px solid var(--line);color:var(--ink-2);
+  box-shadow:none;
+}
+/* 20px is the mark; the target is 44px, reached with a transparent pad so a
+   thumb does not have to find the circle exactly */
+.helpbtn{position:relative}
+.helpbtn::after{content:"";position:absolute;inset:-12px}
+.helpbtn:hover{color:var(--ink);border-color:var(--ink-2)}
+.helpbtn:active{background:var(--shell)}
+/* the round is alone on its row now, and keeps to the right column */
+.hrow .step{margin-left:auto}
 /* the date and the round sit in the same small-caps voice, so the two right
    edges read as one column rather than two unrelated notes */
 .date,.step{font-size:11px;letter-spacing:.11em;text-transform:uppercase;
   color:var(--ink-2);margin:0;white-space:nowrap;flex:0 0 auto}
-.target{font-size:29px;line-height:1.08;font-weight:700;margin:2px 0 6px;letter-spacing:-.01em}
+/* takes the slack: everything from the county name down moves together, so
+   the spare height on a tall phone lands under the masthead and the byline
+   finishes near the bottom of the screen instead of mid-way up it */
+.target{font-size:29px;line-height:1.08;font-weight:700;margin:2px 0 6px;letter-spacing:-.01em;
+  margin-top:auto}
 /* sign-offs are sentences, not two-word county names, so they get a size
    that keeps them to two lines on a phone */
 .target.ending{font-size:24px;line-height:1.15}
@@ -319,11 +342,13 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
 <div class="wrap">
 <header>
   <div class="hrow">
-    <h1>County As Hell</h1>
+    <div class="brandline">
+      <h1>County As Hell</h1>
+      <button id="howto" class="helpbtn" aria-label="How to play" title="How to play">?</button>
+    </div>
     <div class="date" id="date"></div>
   </div>
   <div class="hrow">
-    <button class="linky" id="howto">How to play</button>
     <p class="step" id="step">Round 1 / 5</p>
   </div>
 </header>
