@@ -93,8 +93,10 @@ svg#map{display:block;flex:0 0 100%;width:100%;height:auto;aspect-ratio:__SVG_W_
    about the answer — the outline is the whole target, so it can say "this is
    the thing" without saying "here". */
 @keyframes edgebeat{
-  0%,100%{stroke-width:1.5;stroke-opacity:.8}
-  50%    {stroke-width:3.6;stroke-opacity:1}
+  0%,100%{stroke:#1F2823;stroke-width:1.5;stroke-opacity:.8}
+  /* the same goldenrod a played county wears, so the one colour the map uses
+     to mean "look here" means it in both places */
+  50%    {stroke:#C69E34;stroke-width:3.6;stroke-opacity:1}
 }
 #edge.beat{animation:edgebeat 1.4s ease-in-out 2}
 @media (prefers-reduced-motion: reduce){#edge.beat{animation:none}}
