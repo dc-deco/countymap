@@ -134,11 +134,20 @@ body.revealing .readout,body.revealing .tape{
 /* only the text scrolls; Next county stays pinned, or on a short screen with
    a long fact the primary action lands below the fold inside the card */
 .revealbody{flex:1 1 auto;min-height:0;overflow-y:auto}
+/* The reveal leads with the call and follows with the evidence: a headline
+   that says how you did, the score to its right, then the distance and where
+   you actually put the pin. */
+.rhead{display:flex;align-items:baseline;gap:10px;margin:0 0 3px}
+.rverdict{font-size:15px;font-weight:700;line-height:1.2;letter-spacing:.045em;
+  text-transform:uppercase}
+/* uppercased in CSS rather than typed in caps, so a screen reader reads the
+   words instead of spelling them out */
+.rhead.good .rverdict{color:var(--grass)}
+.rhead.bad .rverdict{color:var(--madder)}
+.rpts{margin-left:auto;white-space:nowrap;font-size:13px;font-weight:700;color:var(--ink-2)}
 /* not .rscore — that name is taken by the recap badge in the results sheet,
    which is nowrap, and the collision stopped this line wrapping at all */
-.reveal .rline{margin:0;font-size:14px;line-height:1.4}
-.reveal .rline b{font-weight:700}
-.reveal .rline .miles{color:var(--ink-2)}
+.reveal .rline{margin:0;font-size:14px;line-height:1.4;color:var(--ink-2)}
 /* the lede already separates the fact from the score line; a coloured rule
    on top of that is one signal too many */
 .rfactline{margin:9px 0 0;font-size:13px;line-height:1.45;color:var(--ink-2)}
@@ -446,7 +455,8 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <button id="lock" class="primary" disabled>Lock it in</button>
   <div class="reveal" id="reveal" hidden>
     <div class="revealbody">
-      <p class="rline" id="revealScore"></p>
+      <p class="rhead" id="revealHead"><span class="rverdict" id="revealVerdict"></span><b class="rpts" id="revealPts"></b></p>
+      <p class="rline" id="revealLine"></p>
       <p class="rfactline"><span class="lede" id="revealLede"></span><span id="revealFact"></span></p>
     </div>
     <button id="nextBtn" class="primary">Next county</button>
@@ -550,15 +560,21 @@ const lockBtn = document.getElementById("lock");
 const readout = document.getElementById("readout");
 const tape = document.getElementById("tape");
 const revealBox = document.getElementById("reveal");
-const revealScore = document.getElementById("revealScore");
+const revealHead = document.getElementById("revealHead");
+const revealVerdict = document.getElementById("revealVerdict");
+const revealPts = document.getElementById("revealPts");
+const revealLine = document.getElementById("revealLine");
 const revealLede = document.getElementById("revealLede");
 const revealFact = document.getElementById("revealFact");
 const nextBtn = document.getElementById("nextBtn");
 
 /* Facts are set as text, never markup, so an apostrophe or a stray angle
    bracket in the copy can never break the page. */
-function showReveal(name, scoreLine){
-  revealScore.innerHTML = scoreLine;
+function showReveal(name, s, v){
+  revealHead.className = "rhead" + (v.tone ? " " + v.tone : "");
+  revealVerdict.textContent = v.head;
+  revealPts.textContent = `${s} ${s === 1 ? "pt" : "pts"}`;
+  revealLine.textContent = v.line;
   const f = FACTS[name];
   revealLede.textContent = f ? name + " County" : "";
   revealFact.textContent = f || "";
@@ -713,21 +729,43 @@ function nearestOnBorder(px, py, d){
   return best;
 }
 
-/* How the reveal reads. Nothing here claims more than the distance knows —
-   no "next county over", since adjacency is never computed. `landed` is null
-   when the tap came down outside Kentucky altogether. */
+/* How the reveal reads: a headline that hands out the verdict, and a line
+   under it that reports the distance and where the pin actually came down.
+   Nothing here claims more than the distance knows — no "next county over",
+   since adjacency is never computed, and no direction, since the guess can
+   sit on any side. `landed` is null when the tap missed Kentucky entirely. */
+const BANDS = [
+  [10,  "Damn near perfect.",            "good"],
+  [30,  "Right down the road.",          ""],
+  [75,  "Not half bad.",                 ""],
+  [150, "A ways off.",                   ""],
+  [225, "Wrong end of the Commonwealth.",""],
+  [Infinity, "Bless your heart.",        "bad"],
+];
 function verdict(mi, exact, target, landed){
-  const d = mi < 10 ? mi.toFixed(1) : String(Math.round(mi));
-  /* band on the number actually shown, so 14.9 does not print "15 miles off"
-     alongside the under-15 line while a true 15 gets a different one */
+  /* one decimal under ten, where a tenth of a mile still means something —
+     but not a bare ".0", which reads like a rounding artefact */
+  const d = (mi < 10 ? mi.toFixed(1).replace(/\.0$/, "") : String(Math.round(mi)));
+  /* band on the number actually shown, so 9.96 does not print "10 miles off"
+     under the under-10 headline while a true 10 gets the next one down */
   const shown = Number(d);
-  if(exact)       return `Dead on. You're standing in ${target}.`;
-  if(!landed)     return `${d} miles off as the crow flies &mdash; you're not even in Kentucky.`;
-  if(shown < 5)   return `${d} miles off as the crow flies. You're in ${landed}, close enough to wave at ${target}.`;
-  if(shown < 18)  return `${d} miles off as the crow flies. You pulled up in ${landed}.`;
-  if(shown < 45)  return `${d} miles off as the crow flies. Right neck of the woods, wrong county &mdash; that's ${landed}.`;
-  if(shown < 100) return `${d} miles off as the crow flies. That's ${landed}, and it's a fair drive from ${target}.`;
-  return `${d} miles off as the crow flies. You're way out in ${landed}.`;
+  if(exact) return {head:"Nailed it.", tone:"good",
+    line:`Dead on. You're standing in ${target}.`};
+
+  const [, head, tone] = BANDS.find(([max]) => shown < max);
+  const off = `${d} miles off as the crow flies.`;
+  if(!landed) return {head, tone, line: shown < 30
+    ? `${off} You're over the state line — close, but we can't give it to you.`
+    : `${off} That's not even Kentucky.`};
+
+  const rib =
+    shown < 10  ? `You're in ${landed}, near enough to holler at ${target}.` :
+    shown < 30  ? `You stopped in ${landed}. Should've kept driving.` :
+    shown < 75  ? `That's ${landed} — right idea, wrong county.` :
+    shown < 150 ? `You put it in ${landed}, a tank of gas from ${target}.` :
+    shown < 225 ? `You're in ${landed}. ${target} is a whole other part of the state.`
+                : `You're in ${landed}, and ${target} is nowhere near it.`;
+  return {head, tone, line:`${off} ${rib}`};
 }
 
 function drawTape(){
@@ -806,9 +844,7 @@ function lockIn(){
   link.setAttribute("opacity", exact?"0":"1");
 
   readout.innerHTML = "";
-  showReveal(name, exact
-    ? `<b>${s} points.</b> ${verdict(mi, true, name, guess.county)}`
-    : `<b>${s} points.</b> <span class="miles">${verdict(mi, false, name, guess.county)}</span>`);
+  showReveal(name, s, verdict(mi, exact, name, guess.county));
   drawTape();
   /* Lock it in has done its job; advancing now belongs to the card, so the
      button below the map stops changing identity mid-round. */
