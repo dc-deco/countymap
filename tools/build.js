@@ -35,6 +35,17 @@ if (backdropSrc && wideFile && wideFile !== backdropSrc &&
   console.error(`  ! ${path.basename(backdropSrc)} is newer than ${path.basename(wideFile)} — ` +
     `run tools/backdrop.py to regenerate, or the old backdrop stays inlined`);
 }
+/* Lato, self-hosted. Inlined as data URIs so the page makes no request to
+   Google Fonts: one less third-party dependency, no flash of fallback text,
+   and it renders the same offline. Lato has no 600, so 700 is the bold. */
+const FONTS = [[400,'lato-400.woff2'],[700,'lato-700.woff2']];
+const fontCss = FONTS.map(([w,f]) => {
+  const fp = path.join(DATA, 'fonts', f);
+  if (!fs.existsSync(fp)) return '';
+  return `@font-face{font-family:Lato;font-style:normal;font-weight:${w};font-display:swap;` +
+         `src:url(data:font/woff2;base64,${fs.readFileSync(fp).toString('base64')}) format("woff2")}`;
+}).filter(Boolean).join('\n');
+
 /* Welcome sheet header. Optional: with no file the sheet simply has no image. */
 const welcomeFile = pick(['welcome.webp','welcome.jpg','welcome.jpeg','welcome.png']);
 const welcomeImg = welcomeFile
@@ -95,6 +106,7 @@ const subs = {
   __FRAME__: JSON.stringify(FRAME),
   __FACTS__: JSON.stringify(FACTS),
   __BACKDROP_CSS__: backdropCss,
+  __FONT_CSS__: fontCss,
   __WELCOME_IMG__: welcomeImg,
 };
 
@@ -111,6 +123,7 @@ fs.writeFileSync(OUT, html);
 console.log(`wrote ${OUT}  ${(fs.statSync(OUT).size/1024).toFixed(0)} KB`);
 console.log(`  ${NAMES.length} counties, ${W.rivers.length} river segs, ${W.lakes.length} lakes, ${W.urban.length} urban`);
 console.log(`  relief ${(webp.length/1024).toFixed(0)} KB webp -> ${(webp.length*4/3/1024).toFixed(0)} KB base64`);
+console.log(`  fonts ${FONTS.length} weights inlined, ${(fontCss.length/1024).toFixed(0)} KB css`);
 console.log(welcomeFile
   ? `  welcome ${path.basename(welcomeFile)} ${(fs.statSync(welcomeFile).size/1024).toFixed(0)} KB`
   : '  welcome image none');

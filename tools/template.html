@@ -4,10 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>County As Hell &middot; A Kentucky Map Game</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+__FONT_CSS__
 :root{
   --paper:#E7EBE8; --panel:#F4F6F4; --ink:#1B2420; --ink-2:#5C6963;
   --line:#A9B5AF; --line-2:#7C8A84;
@@ -20,7 +18,7 @@ html,body{margin:0;padding:0;touch-action:pan-y}
 html{background:var(--paper)}
 body{
   background:transparent; color:var(--ink);
-  font-family:Archivo,system-ui,-apple-system,sans-serif;
+  font-family:Lato,'Helvetica Neue',Helvetica,Arial,system-ui,sans-serif;
   font-size:16px; line-height:1.5;
   display:flex; justify-content:center;
   padding:16px 12px 40px;
@@ -32,13 +30,13 @@ header{display:flex;align-items:flex-start;justify-content:space-between;
   gap:2px 12px;margin-bottom:14px}
 .brand{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
 .brand .linky{font-size:13px}
-h1{font-size:15px;font-weight:600;letter-spacing:.05em;margin:0}
+h1{font-size:15px;font-weight:700;letter-spacing:.05em;margin:0}
 h1 span{color:var(--ink-2);font-weight:400;letter-spacing:.02em;white-space:nowrap}
 .date{font-size:13px;color:var(--ink-2);white-space:nowrap;margin-left:auto}
 
 .prompt{margin:0 0 10px}
 .step{font-size:12px;letter-spacing:.12em;color:var(--ink-2);margin:0 0 2px}
-.target{font-size:38px;line-height:1.05;font-weight:600;margin:0;letter-spacing:-.02em}
+.target{font-size:38px;line-height:1.05;font-weight:700;margin:0;letter-spacing:-.01em}
 .target small{font-size:15px;font-weight:400;color:var(--ink-2);letter-spacing:0;display:block;margin-top:2px}
 /* sign-offs are sentences, not two-word county names, so they get a size
    that keeps them to two lines on a phone */
@@ -66,7 +64,7 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
 .primary:disabled{background:var(--shell);color:var(--line-2);border-color:var(--line)}
 
 .readout{margin-top:12px;min-height:23px;font-size:15px}
-.readout b{font-weight:600}
+.readout b{font-weight:700}
 .readout .miles{color:var(--ink-2)}
 .fact{
   margin-top:10px;padding:11px 13px;
@@ -76,7 +74,7 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
 .fact .lede{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
   color:var(--ink-2);margin-bottom:3px}
 .byline{font-size:13px;color:var(--ink-2);margin:18px 0 0;border-top:1px solid var(--line);padding-top:12px}
-.byline a{color:var(--ink);font-weight:600;text-decoration:underline;
+.byline a{color:var(--ink);font-weight:700;text-decoration:underline;
   text-underline-offset:2px;text-decoration-color:var(--line-2)}
 .byline a:hover,.byline a:focus-visible{text-decoration-color:var(--ink)}
 .credits{font-size:11px;line-height:1.45;color:var(--line-2);margin-top:8px}
@@ -84,7 +82,7 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
 .tape{display:flex;gap:4px;margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
 .cell{flex:1;text-align:center;padding:6px 2px;border:1px solid var(--line)}
 .cell .n{font-size:11px;color:var(--ink-2);letter-spacing:.08em}
-.cell .v{font-size:19px;font-weight:600}
+.cell .v{font-size:19px;font-weight:700}
 .cell.pending .v{color:var(--line-2)}
 .cell.now{border-color:var(--ink);border-width:2px}
 
@@ -126,20 +124,20 @@ dialog.pop .x{
   background:var(--panel);
 }
 dialog.pop .step{margin:0 0 2px}
-.resverdict{font-size:24px;line-height:1.12;font-weight:600;letter-spacing:-.02em;margin:0 0 8px;padding-right:36px}
-dialog.pop .big{font-size:44px;font-weight:600;letter-spacing:-.02em;line-height:1;margin:0}
+.resverdict{font-size:24px;line-height:1.12;font-weight:700;letter-spacing:-.01em;margin:0 0 8px;padding-right:36px}
+dialog.pop .big{font-size:44px;font-weight:700;letter-spacing:-.01em;line-height:1;margin:0}
 dialog.pop #copy{width:100%}
 .rechead{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);
-  font-weight:600;margin:22px 0 0;border-top:1px solid var(--line);padding-top:12px}
+  font-weight:700;margin:22px 0 0;border-top:1px solid var(--line);padding-top:12px}
 .recap{list-style:none;margin:0;padding:0}
 .recap li{padding:11px 0;border-bottom:1px solid var(--line)}
 .recap li:last-child{border-bottom:0;padding-bottom:0}
-.rname{margin:0;font-weight:600;font-size:15px;display:flex;gap:10px;align-items:baseline}
+.rname{margin:0;font-weight:700;font-size:15px;display:flex;gap:10px;align-items:baseline}
 .rscore{margin-left:auto;font-weight:400;font-size:13px;color:var(--ink-2);white-space:nowrap}
 .rfact{margin:3px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2)}
 /* full-bleed header: cancel the sheet's padding so the sign meets the edges */
 .welcomeimg{display:block;width:calc(100% + 36px);height:auto;margin:-20px -18px 16px}
-.weltitle{font-size:clamp(16px,4.9vw,20px);line-height:1.25;font-weight:600;letter-spacing:-.01em;margin:0 0 4px}
+.weltitle{font-size:clamp(16px,4.9vw,20px);line-height:1.25;font-weight:700;letter-spacing:-.01em;margin:0 0 4px}
 /* blocks, so each line holds at any width rather than depending on where the
    text happens to wrap. Only the first line clears the close button — giving
    the whole heading that padding squeezed the longer lines into wrapping. */
@@ -152,7 +150,7 @@ dialog.pop #welGo{width:100%;margin-top:18px}
 .linky:hover{color:var(--ink)}
 .final{margin-top:20px;border-top:2px solid var(--ink);padding-top:14px}
 .final button{width:100%}
-.final .big{font-size:46px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.final .big{font-size:46px;font-weight:700;letter-spacing:-.02em;line-height:1}
 .final .of{font-size:16px;color:var(--ink-2);font-weight:400}
 pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid var(--line);padding:12px;white-space:pre-wrap;margin:12px 0}
 @media (prefers-reduced-motion:no-preference){

@@ -52,6 +52,18 @@ python3 tools/backdrop.py tools/data/welcome.jpeg tools/data/welcome.webp \
 Remove the file and the sheet simply renders without an image. The copy
 itself lives in `tools/template.html`.
 
+Type is Lato, self-hosted from `tools/data/fonts/` and inlined as data URIs,
+so the page makes no request to Google Fonts. Refresh the files with:
+
+```sh
+npm pack @fontsource/lato && tar xzf fontsource-lato-*.tgz
+cp package/files/lato-latin-400-normal.woff2 tools/data/fonts/lato-400.woff2
+cp package/files/lato-latin-700-normal.woff2 tools/data/fonts/lato-700.woff2
+```
+
+Lato has no 600 weight, so bold text is 700. Remove the files and the build
+emits no @font-face, falling back to the system stack.
+
 To fix or reword a county fun fact, edit `tools/data/facts.json` (a plain
 name -> sentence map) and rebuild. The build fails if any of the 120 counties
 is missing a fact, or if a fact names a county that does not exist. Facts are
