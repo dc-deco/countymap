@@ -55,13 +55,21 @@ svg#map{display:block;width:100%;height:auto;aspect-ratio:__SVG_W__ / __SVG_H__;
 #pin,#truth,#link,#terrain,#urban,#water,#outside,#edge{pointer-events:none}
 #counties path{fill:transparent;pointer-events:all;stroke:#26302B;stroke-width:.75;stroke-opacity:.42;vector-effect:non-scaling-stroke}
 #counties path.hit{fill:rgba(228,169,60,.45);stroke:#2A2013;stroke-width:2;stroke-opacity:1}
+/* Pill-shaped, and lifted off the page a little. Square corners on a panel
+   the same colour as the card around it read as a box, not something to
+   press; the radius and the shadow are what say "button" before the label
+   does. Pressing drops the lift and nudges it down a pixel. */
 button{
   font-family:inherit;font-size:15px;background:var(--panel);color:var(--ink);
   border:1px solid var(--line-2);padding:11px 16px;cursor:pointer;
+  border-radius:999px;
+  box-shadow:0 1px 2px rgba(20,28,24,.16);
+  transition:box-shadow .12s ease,transform .12s ease,background-color .12s ease;
 }
-button:active{background:var(--shell)}
-button:disabled{color:var(--line-2);cursor:default}
+button:active{background:var(--shell);transform:translateY(1px);box-shadow:none}
+button:disabled{color:var(--line-2);cursor:default;box-shadow:none;transform:none}
 button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){button{transition:none}}
 
 /* Top-left, which is the one corner of the default view that holds no
    Kentucky at any of the widths the page renders at — the old on-map buttons
@@ -76,8 +84,9 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
 }
 .lockslot{position:relative;margin-top:10px}
 #lock{width:100%}
-.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.primary:active{background:#2F3B35}
+.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);
+  box-shadow:0 2px 6px rgba(20,28,24,.26)}
+.primary:active{background:#2F3B35;box-shadow:0 1px 2px rgba(20,28,24,.2)}
 .primary:disabled{background:var(--shell);color:var(--line-2);border-color:var(--line)}
 
 .readout{margin-top:12px;min-height:23px;font-size:15px}
@@ -261,14 +270,20 @@ dialog.pop #copy{width:100%}
 .weltitle .ln:first-child{padding-right:34px}
 dialog.pop .body{font-size:15px;line-height:1.55;margin:10px 0 0}
 dialog.pop #welGo{width:100%;margin-top:18px}
+/* a button by markup only — it must not pick up any of the pill styling */
 .linky{background:none;border:0;padding:0;font-size:inherit;color:var(--ink-2);
+  border-radius:0;box-shadow:none;
   text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.linky:active{background:none;transform:none}
 .linky:hover{color:var(--ink)}
 .final{margin-top:20px;border-top:2px solid var(--ink);padding-top:14px}
 .final button{width:100%}
 .final .big{font-size:46px;font-weight:700;letter-spacing:-.02em;line-height:1}
 .final .of{font-size:16px;color:var(--ink-2);font-weight:400}
-pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid var(--line);padding:12px;white-space:pre-wrap;margin:12px 0}
+/* rounded to sit with the pill under it, but only 12px — a readout you
+   cannot press should not look like the button you can */
+pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:12px 14px;white-space:pre-wrap;margin:12px 0}
 @media (prefers-reduced-motion:no-preference){
   #pin,#truth,#link{transition:opacity .18s ease}
 }
