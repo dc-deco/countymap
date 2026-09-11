@@ -309,6 +309,7 @@ dialog.pop{
   /* a modal dialog is centred by the UA in the top layer; hand-positioning it
      fought that and pushed the frame off screen. Only the non-modal fallback
      below needs placing. */
+  position:relative;
   width:calc(100% - 24px);max-width:520px;max-height:88vh;
   overflow:hidden;padding:0;border-radius:20px;
   border:1px solid var(--ink);background:var(--panel);
@@ -323,6 +324,32 @@ dialog.pop[open]{display:flex;flex-direction:column}
    dialog grows past max-height, pushing its top off screen */
 dialog.pop .sheet{flex:1 1 auto;min-height:0;overflow-y:auto;
   -webkit-overflow-scrolling:touch;padding:20px 18px 22px}
+/* Where a scrollbar is drawn at all, make it one you can see. iOS never draws
+   one except mid-flick, which is why the fade below is the part that does the
+   real work — but on a desktop and on Android this is the plainer signal. */
+dialog.pop .sheet{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+dialog.pop .sheet::-webkit-scrollbar{width:8px}
+dialog.pop .sheet::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;
+  border:2px solid var(--panel)}
+dialog.pop .sheet::-webkit-scrollbar-track{background:transparent}
+/* The sheet runs past its own bottom and nothing says so: it ends on a clean
+   line of a fact and reads as finished. This fades the last inch out and puts
+   a chevron under it, and shows only while there is something below — so it
+   is an answer to "is that all?" rather than decoration. */
+.more{
+  position:absolute;left:1px;right:1px;bottom:1px;height:64px;
+  border-radius:0 0 19px 19px;pointer-events:none;
+  background:linear-gradient(to top,var(--panel) 38%,rgba(244,246,244,0));
+  opacity:0;transition:opacity .25s ease;
+  display:flex;align-items:flex-end;justify-content:center;padding-bottom:9px;
+}
+.more::after{
+  content:"";width:13px;height:13px;margin-bottom:2px;
+  border-right:2px solid var(--line-2);border-bottom:2px solid var(--line-2);
+  transform:rotate(45deg);
+}
+dialog.pop.more-below .more{opacity:1}
+@media (prefers-reduced-motion: reduce){.more{transition:none}}
 dialog.pop::backdrop{background:rgba(22,30,26,.55)}
 dialog.pop:not(:modal){position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60}
 html.locked,html.locked body{overflow:hidden}
@@ -601,6 +628,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <p class="credits">Relief: USGS &amp; SRTM via Mapzen Terrain Tiles &middot; Boundaries: US Census &middot;
   Water and urban areas: Natural Earth</p>
   </div>
+  <div class="more" aria-hidden="true"></div>
 </dialog>
 
 <dialog id="results" class="pop" tabindex="-1" aria-labelledby="resTitle">
@@ -613,6 +641,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <button id="copy" class="primary">Share your score</button>
   <ol class="recap" id="recap"></ol>
   </div>
+  <div class="more" aria-hidden="true"></div>
 </dialog>
 
 <p class="byline">A Kentucky map game by <a href="https://dandecoste.com" target="_blank" rel="noopener noreferrer">Dan DeCoste</a></p>
@@ -1326,12 +1355,27 @@ function releaseLock(){
   /* only unlock once nothing is left open */
   if(!document.querySelector("dialog.pop[open]")) document.documentElement.classList.remove("locked");
 }
+/* Watches one sheet and flags its dialog while anything is still below the
+   fold. Runs on open too, because a sheet can be scrollable before it has
+   ever been scrolled — which is the only case that matters. */
+function markMore(d){
+  const sheet = d.querySelector(".sheet");
+  if(!sheet) return;
+  const test = () => d.classList.toggle("more-below",
+    sheet.scrollHeight - sheet.scrollTop - sheet.clientHeight > 8);
+  sheet.addEventListener("scroll", test, {passive:true});
+  addEventListener("resize", test);
+  d._more = test;
+  test();
+}
+
 function openPop(d){
   document.documentElement.classList.add("locked");
   if(typeof d.showModal === "function" && !d.open) d.showModal();
   else d.setAttribute("open","");
   const sheet = d.querySelector(".sheet");
   if(sheet) sheet.scrollTop = 0;
+  if(d._more) requestAnimationFrame(d._more);
   /* Opening a dialog moves focus to the first thing inside it, and the browser
      counts that as keyboard focus, so Let's go and the close X both came up
      ringed before anyone had touched a key. Park focus on the dialog itself:
@@ -1368,6 +1412,7 @@ function wirePop(d, closer, tapOutside){
 
 const dlg = document.getElementById("results");
 wirePop(dlg, document.getElementById("resClose"));
+markMore(dlg);
 const openResults = ()=>openPop(dlg);
 
 /* Welcome sheet, shown on every load. "How to play" reopens it after it is
@@ -1375,6 +1420,7 @@ const openResults = ()=>openPop(dlg);
    dialog's close event, so the game is revealed exactly once per path. */
 const welcome = document.getElementById("welcome");
 wirePop(welcome, document.getElementById("welClose"), true);
+markMore(welcome);
 /* The outline beats once the sheet is out of the way, and only before the
    very first pin — a returning player has already been told. Any touch of the
    map calls it off, including a pan that drops no pin. */
