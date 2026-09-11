@@ -266,12 +266,18 @@ dialog.pop .big{font-size:44px;font-weight:700;letter-spacing:-.01em;line-height
 dialog.pop #copy{width:100%}
 .rechead{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);
   font-weight:700;margin:22px 0 0;border-top:1px solid var(--line);padding-top:12px}
-.recap{list-style:none;margin:0;padding:0}
-.recap li{padding:11px 0;border-bottom:1px solid var(--line)}
-.recap li:last-child{border-bottom:0;padding-bottom:0}
+/* County, what it paid, how far off you were, then the fact. No rules between
+   the five — the gap between them does that work, and five hairlines under a
+   pill button read as a table nobody asked for. */
+.recap{list-style:none;margin:26px 0 0;padding:0}
+.recap li{padding:0;margin-top:24px}
+.recap li:first-child{margin-top:0}
 .rname{margin:0;font-weight:700;font-size:15px;display:flex;gap:10px;align-items:baseline}
-.rscore{margin-left:auto;font-weight:400;font-size:13px;color:var(--ink-2);white-space:nowrap}
-.rfact{margin:3px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.rscore{margin-left:auto;font-weight:700;font-size:13px;color:var(--ink);white-space:nowrap}
+/* the multiplier only shows where there is one, so a x1 round stays quiet */
+.rscore .mx{font-weight:400;color:var(--line-2);margin-left:5px}
+.rmiles{margin:2px 0 0;font-size:13px;color:var(--line-2)}
+.rfact{margin:7px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2)}
 /* full-bleed header: cancel the sheet's padding so the sign meets the edges */
 .welcomeimg{display:block;width:calc(100% + 36px);height:auto;margin:-20px -18px 16px}
 .weltitle{font-size:clamp(16px,4.9vw,20px);line-height:1.25;font-weight:700;letter-spacing:-.01em;margin:0 0 4px}
@@ -383,7 +389,6 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <p class="big" id="resScore"></p>
   <pre id="share"></pre>
   <button id="copy" class="primary">Share your score</button>
-  <h3 class="rechead">The five counties</h3>
   <ol class="recap" id="recap"></ol>
   </div>
 </dialog>
@@ -519,7 +524,10 @@ function hideReveal(){
 const FULL = {x:0, y:0, w:__SVG_W__, h:__SVG_H__};
 const MAX_ZOOM = 7;
 let view = {...FULL};
-let round = 0, scores = [], exacts = [], guess = null, done = false, revealing = false;
+/* dists and strays are for the results sheet, which reports each round again
+   once the run is over */
+let round = 0, scores = [], exacts = [], dists = [], strays = [],
+    guess = null, done = false, revealing = false;
 
 /* Water is drawn in map units, so a plain stroke would grow 1:1 with zoom and
    turn every creek into a canal. Damp it: on-screen width tracks zoom^0.35. */
@@ -692,6 +700,13 @@ const BANDS = [
     "Well, you tried.", "Wrong Kentucky, apparently.",
     "We're gonna pretend that didn't happen.", "Lord have mercy."]],
 ];
+/* One decimal under ten, where a tenth of a mile still means something — but
+   not a bare ".0", which reads like a rounding artefact. The reveal and the
+   results sheet both write distances through this, so they always agree. */
+function milesLabel(mi){
+  return mi < 10 ? mi.toFixed(1).replace(/\.0$/, "") : String(Math.round(mi));
+}
+
 const EXACT_HEADS = [
   "Nailed it.", "Dead on.", "That's the one.", "Bullseye.",
   "Well I'll be damned.", "You know your counties.", "Right where it oughta be."];
@@ -735,9 +750,7 @@ const STATE_HEADS = {
   "Arkansas":      "Arkansas. You're a state too far west.",
 };
 function verdict(mi, exact, target, landed, state){
-  /* one decimal under ten, where a tenth of a mile still means something —
-     but not a bare ".0", which reads like a rounding artefact */
-  const d = (mi < 10 ? mi.toFixed(1).replace(/\.0$/, "") : String(Math.round(mi)));
+  const d = milesLabel(mi);
   /* band on the number actually shown, so 9.96 does not print "10 miles off"
      under the under-10 headline while a true 10 gets the next one down */
   const shown = Number(d);
@@ -909,6 +922,8 @@ function lockIn(){
   const s = guess.county ? scoreFor(mi, exact) : 0;
   scores[round] = s;
   exacts[round] = exact;
+  dists[round] = mi;
+  strays[round] = !guess.county;
   /* the round is settled: panning and zooming stay live so the reveal can be
      studied, but the map stops accepting pins */
   revealing = true;
@@ -1064,12 +1079,23 @@ function finish(){
     head.appendChild(document.createTextNode(name + " County"));
     const sc = document.createElement("span");
     sc.className = "rscore";
-    sc.textContent = `${scores[i]} \u00D7 ${MULT[i]} = ${scores[i]*MULT[i]}`;
+    sc.appendChild(document.createTextNode(`${scores[i]} pts`));
+    if(MULT[i] > 1){
+      const mx = document.createElement("span");
+      mx.className = "mx";
+      mx.textContent = `\u00D7${MULT[i]}`;
+      sc.appendChild(mx);
+    }
     head.appendChild(sc);
+    const miles = document.createElement("p");
+    miles.className = "rmiles";
+    const md = milesLabel(dists[i]);
+    miles.textContent = exacts[i] ? "Dead on."
+      : `${md} ${md === "1" ? "mile" : "miles"} off` + (strays[i] ? ", outside Kentucky" : "");
     const fact = document.createElement("p");
     fact.className = "rfact";
     fact.textContent = FACTS[name] || "";
-    li.append(head, fact);
+    li.append(head, miles, fact);
     recap.appendChild(li);
   });
 
