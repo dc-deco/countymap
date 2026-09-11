@@ -41,21 +41,25 @@ h1{font-size:15px;font-weight:700;letter-spacing:.05em;margin:0}
   width:20px;height:20px;padding:0;border-radius:50%;flex:0 0 auto;
   display:inline-flex;align-items:center;justify-content:center;
   font-size:12px;font-weight:700;line-height:1;
-  background:transparent;border:1px solid var(--line);color:var(--ink-2);
+  background:transparent;border:1px solid var(--line-2);color:var(--ink);
   box-shadow:none;
 }
 /* 20px is the mark; the target is 44px, reached with a transparent pad so a
    thumb does not have to find the circle exactly */
 .helpbtn{position:relative}
 .helpbtn::after{content:"";position:absolute;inset:-12px}
-.helpbtn:hover{color:var(--ink);border-color:var(--ink-2)}
+.helpbtn:hover{border-color:var(--ink)}
 .helpbtn:active{background:var(--shell)}
 /* the round is alone on its row now, and keeps to the right column */
 .hrow .step{margin-left:auto}
 /* the date and the round sit in the same small-caps voice, so the two right
-   edges read as one column rather than two unrelated notes */
+   edges read as one column rather than two unrelated notes — but the round
+   carries a step more ink, because it is the one that changes and the one
+   that matters while you are playing */
 .date,.step{font-size:11px;letter-spacing:.11em;text-transform:uppercase;
-  color:var(--ink-2);margin:0;white-space:nowrap;flex:0 0 auto}
+  margin:0;white-space:nowrap;flex:0 0 auto}
+.date{color:var(--ink-2)}
+.step{color:var(--ink)}
 /* takes the slack: everything from the county name down moves together, so
    the spare height on a tall phone lands under the masthead and the byline
    finishes near the bottom of the screen instead of mid-way up it */
@@ -194,6 +198,12 @@ body.revealing .readout,body.revealing .tape{
    rule above this went with them: the strip already ends the page, and a
    full-width hairline under it made a footer out of a signature. */
 .byline{font-size:12px;color:var(--line-2);margin:14px 0 0}
+/* Only where there is slack to give back. Reserving height under the
+   signature shortens the auto margin above the county name by the same
+   amount, so the whole game block rises and the gap under the masthead stops
+   reading as a disconnection rather than a separation. Short screens have no
+   slack in the first place and are left alone. */
+@media (min-height:760px){.byline{margin-bottom:56px}}
 .byline a{color:var(--ink);font-weight:700;text-decoration:underline;
   text-underline-offset:2px;text-decoration-color:var(--line-2)}
 .byline a:hover,.byline a:focus-visible{text-decoration-color:var(--ink)}
