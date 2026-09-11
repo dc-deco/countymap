@@ -1025,7 +1025,11 @@ function drawTape(){
     shield.className = "shield";
     const num = document.createElement("span");
     num.className = "num";
-    num.textContent = played ? String(scores[i]) : String(i + 1);
+    /* A blank marker is what a blank marker is for: the field holds the
+       number you earned, and before you have earned one there is nothing to
+       put there. The round you are on is already said twice over — in the
+       header, and by the one marker standing forward. */
+    num.textContent = played ? String(scores[i]) : "";
     shield.appendChild(num);
     const mult = document.createElement("div");
     mult.className = "mult";
