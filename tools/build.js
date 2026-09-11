@@ -12,6 +12,7 @@ const frame = rd('frame.json');
 const C = rd('counties.json');
 const W = rd('water.json');
 const FACTS = rd('facts.json');
+const STATES = rd('states.json');
 const webp = fs.readFileSync(path.join(DATA, 'relief.webp'));
 
 /* Optional page backdrop: drop a backdrop.* into tools/data and it gets
@@ -117,6 +118,7 @@ const subs = {
   __CENT__: JSON.stringify(CO),
   __FRAME__: JSON.stringify(FRAME),
   __FACTS__: JSON.stringify(FACTS),
+  __STATES__: JSON.stringify(STATES),
   __BACKDROP_CSS__: backdropCss,
   __FONT_CSS__: fontCss,
   __WELCOME_IMG__: welcomeImg,
@@ -138,6 +140,7 @@ console.log(`wrote ${OUT}  ${(fs.statSync(OUT).size/1024).toFixed(0)} KB`);
 console.log(`  ${NAMES.length} counties, ${W.rivers.length} river segs, ${W.lakes.length} lakes, ${W.urban.length} urban`);
 console.log(`  relief ${(webp.length/1024).toFixed(0)} KB webp -> ${(webp.length*4/3/1024).toFixed(0)} KB base64`);
 console.log(`  fonts ${FONTS.length} weights inlined, ${(fontCss.length/1024).toFixed(0)} KB css`);
+console.log(`  states ${STATES.length} in frame, ${STATES.reduce((a,x)=>a+x.r.reduce((b,r)=>b+r.length/2,0),0)} pts`);
 console.log(`  shields ${['shield-fill.webp','shield-ink.webp']
   .map(n => (fs.statSync(path.join(DATA,n)).size/1024).toFixed(1)+' KB').join(' + ')}`);
 console.log(welcomeFile

@@ -52,6 +52,23 @@ python3 tools/backdrop.py tools/data/welcome.jpeg tools/data/welcome.webp \
 Remove the file and the sheet simply renders without an image. The copy
 itself lives in `tools/template.html`.
 
+`tools/data/states.json` holds the neighbouring states, so a tap that misses
+Kentucky can be told which state it landed in. These are never drawn — they
+exist only for a ray cast — so `tools/states.js` cuts them down hard: clipped
+to the map frame, simplified to 0.2 map units (about 90 m), and stored as flat
+coordinate arrays rather than SVG paths. Nine states fall inside the frame,
+653 points, 8 KB. Regenerate after any change to `frame.json` or the SVG size:
+
+```sh
+node tools/states.js
+```
+
+Tolerance is safe because one CSS pixel is about 140 m even at full zoom, so
+no seam it leaves along a state line is reachable with a finger. Where a
+neighbour's outline does not quite meet Kentucky's — the Ohio and Mississippi
+channels — a tap names no state and the reveal falls back to its generic
+line; every such point measured sits within a tenth of a mile of the border.
+
 The progress strip draws a blank Kentucky route marker per round. Unlike the
 images above these are required, and they are masks rather than pictures: the
 strip has to colour a marker four ways (still to come, current, played, dead

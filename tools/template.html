@@ -370,6 +370,25 @@ Water and urban areas: Natural Earth</p>
 const NAMES = __NAMES__;
 const CO = __CENT__;
 const FACTS = __FACTS__;
+/* Neighbour states, flat rings in map units, biggest share of the frame
+   first. They are never drawn — they exist so a tap that misses Kentucky can
+   still be told where it landed. See tools/states.js. */
+const STATES = __STATES__;
+/* Even-odd ray cast across every ring of a state, which handles the holes and
+   the river islands without treating them specially. */
+function stateAt(x, y){
+  for(const s of STATES){
+    let inside = false;
+    for(const r of s.r){
+      for(let i = 0, j = r.length - 2; i < r.length; j = i, i += 2){
+        const xi = r[i], yi = r[i+1], xj = r[j], yj = r[j+1];
+        if((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+      }
+    }
+    if(inside) return s.n;
+  }
+  return null;
+}
 const MULT = [1,1,2,3,3];
 
 const EASY = ["Jefferson","Fayette","Kenton","Boone","Warren","Daviess","Hardin","Campbell","Christian","McCracken","Madison","Boyd","Pike","Laurel","Pulaski","Franklin"];
@@ -558,7 +577,9 @@ function endPtr(e){
   const p = toSvg(e.clientX,e.clientY);
   const el = document.elementFromPoint(e.clientX,e.clientY);
   const county = (el && el.tagName==="path") ? el.dataset.n : null;
-  guess = {x:p.x, y:p.y, county};
+  /* only worth asking when the pin missed Kentucky, which is the only time
+     the reveal has anything to say about it */
+  guess = {x:p.x, y:p.y, county, state: county ? null : stateAt(p.x, p.y)};
   gPin.setAttribute("transform",`translate(${p.x} ${p.y})`);
   gPin.setAttribute("opacity","1");
   lockBtn.disabled = false;
@@ -609,7 +630,21 @@ const BANDS = [
   [225, "Wrong end of the Commonwealth.",""],
   [Infinity, "Bless your heart.",        "bad"],
 ];
-function verdict(mi, exact, target, landed){
+/* Miss the state and the state gets the headline — it is a better joke than
+   the distance is. Anything in the frame without a line of its own falls back
+   to naming itself. */
+const STATE_HEADS = {
+  "Indiana":       "That's Indiana.",
+  "Ohio":          "That's Ohio, bud.",
+  "Tennessee":     "You've wandered into Tennessee.",
+  "West Virginia": "West Virginia. Try again.",
+  "Virginia":      "Wrong commonwealth.",
+  "Illinois":      "That's Illinois.",
+  "Missouri":      "Missouri. You crossed the Mississippi.",
+  "North Carolina":"North Carolina. You cleared the mountains.",
+  "Arkansas":      "Arkansas. You're a state too far west.",
+};
+function verdict(mi, exact, target, landed, state){
   /* one decimal under ten, where a tenth of a mile still means something —
      but not a bare ".0", which reads like a rounding artefact */
   const d = (mi < 10 ? mi.toFixed(1).replace(/\.0$/, "") : String(Math.round(mi)));
@@ -621,9 +656,15 @@ function verdict(mi, exact, target, landed){
 
   const [, head, tone] = BANDS.find(([max]) => shown < max);
   const off = `${d} miles off as the crow flies.`;
-  if(!landed) return {head, tone, line: shown < 30
-    ? `${off} You're over the state line — close, but we can't give it to you.`
-    : `${off} That's not even Kentucky.`};
+  /* the seams where a neighbour's outline does not quite meet Kentucky's are
+     all within about a tenth of a mile of the border, so a tap that names no
+     state at all was a near miss and reads as one */
+  if(!landed) return {
+    head: state ? (STATE_HEADS[state] || `That's ${state}.`) : "Not even Kentucky.",
+    tone: "",
+    line: shown < 30
+      ? `${off} Close, but we asked about Kentucky.`
+      : `${off} ${target}'s back over in Kentucky.`};
 
   const rib =
     shown < 10  ? `You're in ${landed}, near enough to holler at ${target}.` :
@@ -711,7 +752,7 @@ function lockIn(){
   link.setAttribute("opacity", exact?"0":"1");
 
   readout.innerHTML = "";
-  showReveal(name, s, verdict(mi, exact, name, guess.county));
+  showReveal(name, s, verdict(mi, exact, name, guess.county, guess.state));
   drawTape();
   /* Lock it in has done its job; advancing now belongs to the card, so the
      button below the map stops changing identity mid-round. */
