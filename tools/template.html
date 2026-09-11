@@ -1251,7 +1251,9 @@ function finish(){
   drawTape();
 
   const share = `countyashell.com ${iso}\n` + scores.map(s=>`${s}${emoji(s)}`).join(" ") + `\nFinal score: ${total}`;
-  document.getElementById("resStep").textContent = `Done \u00B7 ${iso}`;
+  /* the big score below says the run is over; the line above it only needs
+     to say which day it was */
+  document.getElementById("resStep").textContent = iso;
   document.getElementById("resTitle").textContent = endingFor(total);
   const big = document.getElementById("resScore");
   big.textContent = String(total);
