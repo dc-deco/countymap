@@ -74,7 +74,7 @@ h1{font-size:15px;font-weight:700;letter-spacing:.05em;margin:0}
 /* takes the slack: everything from the county name down moves together, so
    the spare height on a tall phone lands under the masthead and the byline
    finishes near the bottom of the screen instead of mid-way up it */
-.target{font-size:29px;line-height:1.08;font-weight:700;margin:2px 0 6px;letter-spacing:-.01em;
+.target{font-size:29px;line-height:1.08;font-weight:700;margin:2px 0 3px;letter-spacing:-.01em;
   margin-top:auto}
 /* sign-offs are sentences, not two-word county names, so they get a size
    that keeps them to two lines on a phone */
@@ -160,9 +160,10 @@ dialog.pop:focus,dialog.pop:focus-visible{outline:none}
 .primary:active{background:#2F3B35;box-shadow:0 1px 2px rgba(20,28,24,.2)}
 .primary:disabled{background:var(--shell);color:var(--line-2);border-color:var(--line)}
 
-/* the height is reserved so dropping a pin does not shove the strip down,
-   but it does not need a full 15px line to hold a one-line hint */
-.readout{margin-top:8px;min-height:19px;font-size:13px}
+/* Sits between the county name and the map, which is where the eye already
+   is when the round starts. The height stays reserved whatever it says, or
+   the map would jump the moment a pin lands. */
+.readout{margin:0 0 6px;min-height:19px;font-size:13px}
 .readout b{font-weight:700}
 .readout .miles{color:var(--ink-2)}
 /* The reveal is out of the flow so locking in shifts nothing on the page. It
@@ -405,6 +406,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
 </header>
 
 <h2 class="target" id="target">&nbsp;</h2>
+<div class="readout" id="readout"></div>
 
 <div class="mapbox">
   <svg id="map" viewBox="0 0 2000 2105.7" role="application" aria-label="Shaded relief map of Kentucky and its counties">
@@ -568,7 +570,6 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   </div>
 </div>
 
-<div class="readout" id="readout"></div>
 <div class="tape" id="tape" role="list" aria-label="Round progress"></div>
 <div id="final"></div>
 
