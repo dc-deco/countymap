@@ -111,7 +111,13 @@ svg#map{display:block;flex:0 0 100%;width:100%;height:auto;aspect-ratio:__SVG_W_
 @media (prefers-reduced-motion: reduce){#edge.beat{animation:none}}
 /* the answer's fill fades up as the line lands on it, and the round before
    it fades back down to goldenrod as the next one starts */
-#counties path{fill:transparent;pointer-events:all;stroke:#26302B;stroke-width:.75;stroke-opacity:.42;vector-effect:non-scaling-stroke;
+/* Zoomed out, hairlines: 120 of them over a hillshade, and anything heavier
+   turns the state into a net. Zoomed in, the terrain gains detail while a
+   non-scaling stroke stays exactly as thin, so the lines lose the fight — the
+   width and the ink both climb with the zoom instead. --cw and --co come from
+   setView; the fallbacks are the zoomed-out values. */
+#counties path{fill:transparent;pointer-events:all;stroke:#26302B;
+  stroke-width:var(--cw,.75);stroke-opacity:var(--co,.42);vector-effect:non-scaling-stroke;
   transition:fill .28s ease,stroke-opacity .28s ease,stroke-width .28s ease}
 @media (prefers-reduced-motion: reduce){#counties path{transition:none}}
 /* Counties already played stay marked for the rest of the run, so the map
@@ -121,8 +127,12 @@ svg#map{display:block;flex:0 0 100%;width:100%;height:auto;aspect-ratio:__SVG_W_
    to be mistaken for the round being asked, which anyway carries the heavy
    outline, the marker and the line to your pin. .hit comes after this rule,
    so the round in play always wins. */
-#counties path.past{fill:rgba(198,158,52,.42);stroke:#6B5416;stroke-width:1.4;stroke-opacity:.65}
-#counties path.hit{fill:rgba(228,169,60,.45);stroke:#2A2013;stroke-width:2;stroke-opacity:1}
+/* the played and the answered keep their weight relative to the rest, so the
+   ranking holds at every zoom */
+#counties path.past{fill:rgba(198,158,52,.42);stroke:#6B5416;
+  stroke-width:calc(var(--cw,.75) * 1.87);stroke-opacity:.65}
+#counties path.hit{fill:rgba(228,169,60,.45);stroke:#2A2013;
+  stroke-width:calc(var(--cw,.75) * 2.67);stroke-opacity:1}
 /* Pill-shaped, and lifted off the page a little. Square corners on a panel
    the same colour as the card around it read as a box, not something to
    press; the radius and the shadow are what say "button" before the label
@@ -695,10 +705,18 @@ let round = 0, scores = [], exacts = [], dists = [], strays = [],
 const riverGroups = [...document.querySelectorAll("#rivers > g")]
   .map(g => ({g, w: parseFloat(g.getAttribute("stroke-width"))}));
 const lakeGroup = document.getElementById("lakes");
-function scaleWater(){
+function scaleStrokes(){
   const k = Math.pow(FULL.w/view.w, -0.65);
   for(const r of riverGroups) r.g.setAttribute("stroke-width", (r.w*k).toFixed(3));
   lakeGroup.setAttribute("stroke-width", k.toFixed(3));
+  /* County lines the other way: thicker and darker as you go in, because that
+     is where the hillshade gets busy enough to swallow a hairline. The power
+     curve puts most of the gain in the first couple of steps, where the
+     texture arrives; by full zoom they are 1.8px at .78 rather than .75 at
+     .42. */
+  const z = FULL.w / view.w;
+  svg.style.setProperty("--cw", (0.75 * Math.pow(z, 0.45)).toFixed(3));
+  svg.style.setProperty("--co", Math.min(0.78, 0.42 + 0.36 * (z - 1) / (MAX_ZOOM - 1)).toFixed(3));
 }
 
 /* How far past the edge a drag may pull, as a fraction of the view. Zoomed
@@ -723,7 +741,7 @@ function applyView(v){
   v.h = v.w * (FULL.h/FULL.w);
   view = v;
   svg.setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.h}`);
-  scaleWater();
+  scaleStrokes();
 }
 function setView(v, pull){
   const maxW = FULL.w, minW = FULL.w/MAX_ZOOM;
