@@ -80,7 +80,10 @@ h1{font-size:15px;font-weight:700;letter-spacing:.05em;margin:0}
    that keeps them to two lines on a phone */
 .target.ending{font-size:24px;line-height:1.15}
 
-.mapbox{position:relative;background:#93A48C;border:1px solid #46524B;overflow:hidden;touch-action:none;
+/* the ground behind the frame, seen only in the band an over-pull opens at
+   the edge: quiet enough not to read as a green wall, dark enough to say the
+   map has run out */
+.mapbox{position:relative;background:#C6CDC0;border:1px solid #46524B;overflow:hidden;touch-action:none;
   display:flex;align-items:center;justify-content:center;
   /* The frame carries terrain well past Kentucky, and on a short screen that
      margin is the first thing that can go. Capping the box clips the frame
@@ -748,15 +751,61 @@ function scaleWater(){
   lakeGroup.setAttribute("stroke-width", k.toFixed(3));
 }
 
-function setView(v){
-  const maxW = FULL.w, minW = FULL.w/MAX_ZOOM;
-  v.w = Math.min(maxW, Math.max(minW, v.w));
+/* How far past the edge a drag may pull, as a fraction of the view. Zoomed
+   all the way out there is nowhere to pan to, and a drag that does nothing at
+   all reads as a dead surface — which is the first thing a thumb tries. So it
+   gives, against increasing resistance, and springs back on release. */
+const OVERPULL = 0.06;
+function rubber(v, lo, hi, give){
+  if(give <= 0) return Math.min(hi, Math.max(lo, v));
+  /* asymptotic: the further you pull the less you get, and never past give */
+  if(v < lo) return lo - give * (1 - 1 / (1 + (lo - v) / give));
+  if(v > hi) return hi + give * (1 - 1 / (1 + (v - hi) / give));
+  return v;
+}
+function bounds(w, h){
+  return {x0:FULL.x, x1:FULL.x+FULL.w-w, y0:FULL.y, y1:FULL.y+FULL.h-h};
+}
+/* Writes whatever it is handed. Only the spring-back uses this directly: it
+   is already interpolating between two known-good positions, and sending its
+   frames back through the clamp would snap the first one straight home. */
+function applyView(v){
   v.h = v.w * (FULL.h/FULL.w);
-  v.x = Math.min(FULL.x+FULL.w-v.w, Math.max(FULL.x, v.x));
-  v.y = Math.min(FULL.y+FULL.h-v.h, Math.max(FULL.y, v.y));
   view = v;
   svg.setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.h}`);
   scaleWater();
+}
+function setView(v, pull){
+  const maxW = FULL.w, minW = FULL.w/MAX_ZOOM;
+  v.w = Math.min(maxW, Math.max(minW, v.w));
+  const h = v.w * (FULL.h/FULL.w);
+  const b = bounds(v.w, h);
+  v.x = rubber(v.x, b.x0, b.x1, pull ? v.w * OVERPULL : 0);
+  v.y = rubber(v.y, b.y0, b.y1, pull ? h * OVERPULL : 0);
+  applyView(v);
+}
+/* One handle for every animation of the view — the opening glide and the
+   spring-back — so a new touch cancels whichever is running without either
+   having to know about the other. */
+let drift = null;
+/* Back inside the edges once the fingers are off. Uses the same handle as the
+   opening glide, so a new touch cancels whichever is running. */
+function settleView(){
+  const b = bounds(view.w, view.h);
+  const to = {x: Math.min(b.x1, Math.max(b.x0, view.x)),
+              y: Math.min(b.y1, Math.max(b.y0, view.y)), w: view.w};
+  if(Math.abs(to.x - view.x) < 0.01 && Math.abs(to.y - view.y) < 0.01) return;
+  stopDrift();
+  if(reduceMotion.matches){ setView(to); return; }
+  const from = {x:view.x, y:view.y}, t0 = performance.now(), dur = 300;
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur), e = easeOut(t);
+    applyView({x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e, w: to.w});
+    if(t < 1){ drift = requestAnimationFrame(step); return; }
+    drift = null;
+    setView(to);
+  };
+  drift = requestAnimationFrame(step);
 }
 /* zoom by f, holding the svg point at viewport fraction (fx,fy) still.
    width is clamped up front so a zoom past the limit is a no-op instead of
@@ -817,7 +866,7 @@ svg.addEventListener("pointermove", e=>{
   if(Math.abs(dx)>5||Math.abs(dy)>5) moved=true;
   if(!moved) return;
   const scale = view.w / svg.getBoundingClientRect().width;
-  setView({x:start.view.x-dx*scale, y:start.view.y-dy*scale, w:start.view.w, h:start.view.h});
+  setView({x:start.view.x-dx*scale, y:start.view.y-dy*scale, w:start.view.w, h:start.view.h}, true);
 });
 function endPtr(e){
   const was = ptrs.size;
@@ -831,6 +880,7 @@ function endPtr(e){
   }
   const tap = was===1 && !moved && !done && !revealing;
   start=null;
+  settleView();
   if(!tap) return;
   const p = toSvg(e.clientX,e.clientY);
   const el = document.elementFromPoint(e.clientX,e.clientY);
@@ -1267,7 +1317,6 @@ function maybeBeat(){ if(round === 0 && !guess && !done) edgePath.classList.add(
    stops it where it is instead of snapping: that view is a legal one, and it
    is the one the hand is already on. Its own frame handle, kept away from the
    reveal's, or a pointerdown during a reveal would cancel that animation. */
-let drift = null;
 function stopDrift(){
   if(drift !== null){ cancelAnimationFrame(drift); drift = null; }
 }
