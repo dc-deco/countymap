@@ -150,6 +150,14 @@ Between them the three tiers must name all 120 counties, exactly once each;
 because 33 counties sat in no tier for a while, which nothing could catch from
 the outside: the game ran perfectly and simply never mentioned them.
 
+The day itself is Eastern, not the player's own clock — the zone Louisville,
+Lexington and Frankfort keep. It used to be local, which meant that between
+midnight in the east and midnight in the west, half the country was on
+tomorrow's counties: Kentucky straddles two zones, so the state split for an
+hour every night, and a shared score could name a puzzle a friend had not been
+given yet. `node tools/daycheck.js` sets seven devices in seven zones to one
+instant and asserts they all draw the same five.
+
 `node tools/rotation.js [days]` replays the shipped generator over consecutive
 dates and reports how often each county comes round and when the five first
 repeat. It measures the build rather than an idealised model, which matters:
