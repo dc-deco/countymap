@@ -56,10 +56,12 @@ svg#map{display:block;width:100%;height:auto;aspect-ratio:__SVG_W__ / __SVG_H__;
 #counties path{fill:transparent;pointer-events:all;stroke:#26302B;stroke-width:.75;stroke-opacity:.42;vector-effect:non-scaling-stroke}
 /* Counties already played stay marked for the rest of the run, so the map
    builds up the day's five and you have landmarks to steer by in later
-   rounds. Same amber as the answer, turned well down: a quieter version of
-   the same mark reads as "done" where a second colour would read as a second
-   kind of thing. .hit comes after, so the round in play always wins. */
-#counties path.past{fill:rgba(228,169,60,.26);stroke:#2A2013;stroke-width:1.4;stroke-opacity:.7}
+   rounds. Muted goldenrod, a half step duller and browner than the amber the
+   live answer wears — near enough to read as the same family, far enough not
+   to be mistaken for the round being asked, which anyway carries the heavy
+   outline, the marker and the line to your pin. .hit comes after this rule,
+   so the round in play always wins. */
+#counties path.past{fill:rgba(198,158,52,.42);stroke:#6B5416;stroke-width:1.4;stroke-opacity:.65}
 #counties path.hit{fill:rgba(228,169,60,.45);stroke:#2A2013;stroke-width:2;stroke-opacity:1}
 /* Pill-shaped, and lifted off the page a little. Square corners on a panel
    the same colour as the card around it read as a box, not something to
