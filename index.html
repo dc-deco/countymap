@@ -90,13 +90,39 @@ button:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
 .readout{margin-top:12px;min-height:23px;font-size:15px}
 .readout b{font-weight:700}
 .readout .miles{color:var(--ink-2)}
-.fact{
-  margin-top:10px;padding:11px 13px;
-  background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--grass);
-  font-size:14px;line-height:1.5;color:var(--ink);
+/* The reveal sits over the map instead of in the flow: the old inline fact
+   box pushed the strip and footer down the page on every guess. Anchored to
+   the bottom so the highlighted county stays visible above it where it fits,
+   and collapsible to a bar when it does not. touch-action is restored here
+   because .mapbox sets none for its own gestures, which would also kill
+   scrolling inside this card. */
+.reveal{
+  position:absolute;left:0;right:0;bottom:0;z-index:3;
+  max-height:100%;display:flex;flex-direction:column;touch-action:pan-y;
+  padding:10px 12px 12px;
+  background:rgba(244,246,244,.975);border-top:1px solid var(--line-2);
+  box-shadow:0 -6px 18px rgba(20,28,24,.16);
 }
-.fact .lede{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--ink-2);margin-bottom:3px}
+/* display:flex outranks the [hidden] attribute, same trap the results dialog
+   hit — without this the card never hides */
+.reveal[hidden]{display:none}
+/* only the text scrolls; Next county stays pinned, or on a short screen with
+   a long fact the primary action lands below the fold inside the card */
+.revealbody{flex:1 1 auto;min-height:0;overflow-y:auto}
+/* not .rscore — that name is taken by the recap badge in the results sheet,
+   which is nowrap, and the collision stopped this line wrapping at all */
+.reveal .rline{margin:0;font-size:14px;line-height:1.4;padding-right:52px}
+.reveal .rline b{font-weight:700}
+.reveal .rline .miles{color:var(--ink-2)}
+.rfactline{margin:7px 0 0;font-size:13px;line-height:1.45;color:var(--ink-2);
+  border-left:3px solid var(--grass);padding-left:9px}
+.rfactline .lede{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--line-2);font-weight:700;margin-bottom:1px}
+.reveal.mini .rfactline{display:none}
+.reveal #nextBtn{flex:0 0 auto;width:100%;margin-top:9px;padding:9px 12px}
+.rtoggle{position:absolute;top:8px;right:10px;padding:3px 8px;font-size:11px;
+  letter-spacing:.04em;border-radius:999px;background:transparent;border-color:var(--line);
+  color:var(--ink-2)}
 .byline{font-size:13px;color:var(--ink-2);margin:18px 0 0;border-top:1px solid var(--line);padding-top:12px}
 .byline a{color:var(--ink);font-weight:700;text-decoration:underline;
   text-underline-offset:2px;text-decoration-color:var(--line-2)}
@@ -358,12 +384,19 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
     <button id="zin" aria-label="Zoom in">+</button>
     <button id="zout" aria-label="Zoom out">&minus;</button>
   </div>
+  <div class="reveal" id="reveal" hidden>
+    <button class="rtoggle" id="revealToggle" aria-expanded="true">Hide</button>
+    <div class="revealbody">
+      <p class="rline" id="revealScore"></p>
+      <p class="rfactline"><span class="lede" id="revealLede"></span><span id="revealFact"></span></p>
+    </div>
+    <button id="nextBtn" class="primary">Next county</button>
+  </div>
 </div>
 
 <button id="lock" class="primary" disabled>Lock it in</button>
 
 <div class="readout" id="readout"></div>
-<div class="fact" id="fact" hidden><span class="lede" id="factLede"></span><span id="factText"></span></div>
 <div class="tape" id="tape" role="list" aria-label="Round progress"></div>
 <div id="final"></div>
 
@@ -459,18 +492,31 @@ const link = document.getElementById("link");
 const lockBtn = document.getElementById("lock");
 const readout = document.getElementById("readout");
 const tape = document.getElementById("tape");
-const factBox = document.getElementById("fact");
-const factLede = document.getElementById("factLede");
-const factText = document.getElementById("factText");
+const revealBox = document.getElementById("reveal");
+const revealScore = document.getElementById("revealScore");
+const revealLede = document.getElementById("revealLede");
+const revealFact = document.getElementById("revealFact");
+const nextBtn = document.getElementById("nextBtn");
+const revealToggle = document.getElementById("revealToggle");
+revealToggle.onclick = ()=>{
+  const mini = revealBox.classList.toggle("mini");
+  revealToggle.textContent = mini ? "Fact" : "Hide";
+  revealToggle.setAttribute("aria-expanded", String(!mini));
+};
 
 /* Facts are set as text, never markup, so an apostrophe or a stray angle
    bracket in the copy can never break the page. */
-function showFact(name){
+function showReveal(name, scoreLine){
+  revealScore.innerHTML = scoreLine;
   const f = FACTS[name];
-  if(!f){ factBox.hidden = true; return; }
-  factLede.textContent = name + " County";
-  factText.textContent = f;
-  factBox.hidden = false;
+  revealLede.textContent = f ? name + " County" : "";
+  revealFact.textContent = f || "";
+  revealBox.classList.remove("mini");
+  revealToggle.textContent = "Hide";
+  revealToggle.setAttribute("aria-expanded", "true");
+  revealToggle.hidden = !f;
+  revealBox.querySelector('.revealbody').scrollTop = 0;
+  revealBox.hidden = false;
 }
 
 const FULL = {x:0, y:0, w:2000, h:953.63};
@@ -671,7 +717,7 @@ function startRound(){
   lockBtn.disabled = true;
   lockBtn.onclick = lockIn;
   readout.innerHTML = "";
-  factBox.hidden = true;
+  revealBox.hidden = true;
   setView({...FULL});
   drawTape();
 }
@@ -697,15 +743,16 @@ function lockIn(){
   link.setAttribute("x2",c.x); link.setAttribute("y2",c.y);
   link.setAttribute("opacity", exact?"0":"1");
 
-  readout.innerHTML = exact
+  readout.innerHTML = "";
+  showReveal(name, exact
     ? `<b>${s} points.</b> ${verdict(mi, true, name, guess.county)}`
-    : `<b>${s} points.</b> <span class="miles">${verdict(mi, false, name, guess.county)}</span>`;
-
-  showFact(name);
+    : `<b>${s} points.</b> <span class="miles">${verdict(mi, false, name, guess.county)}</span>`);
   drawTape();
-  lockBtn.disabled = false;
-  lockBtn.textContent = round<4 ? "Next county" : "See your score";
-  lockBtn.onclick = ()=>{ round++; if(round<5) startRound(); else finish(); };
+  /* Lock it in has done its job; advancing now belongs to the card, so the
+     button below the map stops changing identity mid-round. */
+  lockBtn.disabled = true;
+  nextBtn.textContent = round<4 ? "Next county" : "See your score";
+  nextBtn.onclick = ()=>{ round++; if(round<5) startRound(); else finish(); };
 }
 
 function emoji(s){ return s>=95?"\u{1F3AF}":s>=85?"\u{1F389}":s>=70?"\u{1F525}":s>=50?"\u{1F31F}":s>=25?"\u{1F914}":"\u{1F4A5}"; }
@@ -808,7 +855,7 @@ function finish(){
   target.appendChild(stamp);
   lockBtn.style.display = "none";
   readout.innerHTML = "";
-  factBox.hidden = true;
+  revealBox.hidden = true;
   drawTape();
 
   const share = `countyashell.com ${iso}\n` + scores.map(s=>`${s}${emoji(s)}`).join(" ") + `\nFinal score: ${total}`;
