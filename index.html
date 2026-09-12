@@ -164,6 +164,10 @@ svg#map{display:block;flex:0 0 100%;width:100%;height:auto;aspect-ratio:2000 / 2
   stroke-width:calc(var(--cw,.75) * 1.87);stroke-opacity:.65}
 #counties path.hit{fill:rgba(228,169,60,.45);stroke:#2A2013;
   stroke-width:calc(var(--cw,.75) * 2.67);stroke-opacity:1}
+/* Once the run is over the five are the only live things on the map, and the
+   one being read wears .hit -- the same emphasis the round in play used to
+   carry, put back to work saying "this is the card you are looking at". */
+.mapbox.browsable #counties path.past{cursor:pointer}
 /* Pill-shaped, and lifted off the page a little. Square corners on a panel
    the same colour as the card around it read as a box, not something to
    press; the radius and the shadow are what say "button" before the label
@@ -232,15 +236,19 @@ dialog.pop:focus,dialog.pop:focus-visible{outline:none}
 /* The rows the card covers are hidden rather than left underneath it: the
    current marker's fill was bleeding out past the card's rounded edge, and
    a half-covered strip reads as a rendering bug. They cross-fade with the
-   card, since a pop behind a half-transparent card is worse than either. */
-.readout,.tape{transition:opacity .34s ease, visibility 0s}
-body.revealing .readout,body.revealing .tape{
+   card, since a pop behind a half-transparent card is worse than either.
+   See your score joins them once the day is done -- the browse card lands
+   squarely on top of it, and a pill showing through the corners of the card
+   covering it is the same bug in a second place. */
+.readout,.tape,#final{transition:opacity .34s ease, visibility 0s}
+body.revealing .readout,body.revealing .tape,body.revealing #final{
   visibility:hidden;opacity:0;
   transition:opacity .28s ease, visibility 0s .28s;
 }
 @media (prefers-reduced-motion: reduce){
-  .reveal,.reveal[hidden],.readout,.tape,
-  body.revealing .readout,body.revealing .tape{transition:none}
+  .reveal,.reveal[hidden],.readout,.tape,#final,
+  body.revealing .readout,body.revealing .tape,
+  body.revealing #final{transition:none}
 }
 /* only the text scrolls; Next county stays pinned, or on a short screen with
    a long fact the primary action lands below the fold inside the card */
@@ -757,6 +765,14 @@ const canStore = (()=>{
 })();
 if(params.has("wipe")){ try{ localStorage.removeItem(STORE); }catch(e){} }
 const record = readRecord() || {v:1, runs:0, streak:0, last:null};
+/* Every field the day is made of, written together. Two callers used to keep
+   their own copies of this list and a third would have made three. */
+function saveDay(n){
+  record.day = iso; record.n = n;
+  record.scores = scores; record.exacts = exacts; record.dists = dists;
+  record.strays = strays; record.verdicts = verdicts;
+  writeRecord(record);
+}
 /* ?fresh drops the day's board and leaves the history alone. Note that
    finish() only counts a run when record.last is not today, so replaying a
    day this way cannot inflate the streak or the day count. */
@@ -942,12 +958,58 @@ function hideReveal(){
   document.body.classList.remove("revealing");
 }
 
+/* Reading the day back.
+
+   When the run ends the map keeps all five counties in goldenrod, which is a
+   good picture and, until now, a dead one -- the facts were a beat you saw
+   once each and then only in the recap, behind a sheet most people close. So
+   the finished map answers taps: one of your five gives its card back, with
+   what you scored and the fact you probably skimmed the first time. */
+function browseHint(){
+  readout.innerHTML = `<span class="miles">Tap a county to read its fact.</span>`;
+}
+/* A record from before the verdicts were kept still has the numbers, so
+   rebuild what the numbers can carry. Where the pin actually landed was never
+   stored, so the rib that names that county is gone -- the headline and the
+   distance stand on their own. Cached and written back, so the re-roll
+   happens once and never in front of the same player twice. */
+function verdictFor(i){
+  if(verdicts[i]) return verdicts[i];
+  const d = milesLabel(dists[i] || 0);
+  const shown = Number(d);
+  const off = `${d} ${d === "1" ? "mile" : "miles"} off as the crow flies.`;
+  const band = BANDS.findIndex(([max]) => shown < max);
+  verdicts[i] =
+    exacts[i] ? {head: exactHead(), tone:"good",
+                 line:`Dead on. You're standing in ${puzzle[i]}.`} :
+    strays[i] ? {head:"Not even Kentucky.", tone:"",
+                 line:`${off} ${puzzle[i]}'s back over in Kentucky.`}
+              : {head: bandHead[band](), tone: BANDS[band][1], line: off};
+  saveDay(5);
+  return verdicts[i];
+}
+function browse(name){
+  const i = puzzle.indexOf(name);
+  if(i < 0 || scores[i] === undefined) return hideBrowse();
+  paintPlayed();
+  for(const path of countyPaths) if(path.dataset.n === name) path.classList.add("hit");
+  nextBtn.textContent = "Close";
+  nextBtn.onclick = hideBrowse;
+  showReveal(name, scores[i], verdictFor(i));
+}
+function hideBrowse(){
+  if(!done) return;
+  hideReveal();
+  paintPlayed();
+  browseHint();
+}
+
 const FULL = {x:0, y:0, w:2000, h:2105.7};
 const MAX_ZOOM = 7;
 let view = {...FULL};
 /* dists and strays are for the results sheet, which reports each round again
    once the run is over */
-let round = 0, scores = [], exacts = [], dists = [], strays = [],
+let round = 0, scores = [], exacts = [], dists = [], strays = [], verdicts = [],
     guess = null, done = false, revealing = false;   // all replaced by restore()
 
 /* Water is drawn in map units, so a plain stroke would grow 1:1 with zoom and
@@ -1096,7 +1158,7 @@ function endPtr(e){
     start={x:p.x,y:p.y,view:{...view}}; moved=true;
     return;
   }
-  const tap = was===1 && !moved && !done && !revealing;
+  const tap = was===1 && !moved;
   start=null;
   settleView();
   if(!tap) return;
@@ -1104,6 +1166,11 @@ function endPtr(e){
   const el = document.elementFromPoint(e.clientX,e.clientY);
   const hit = (el && el.tagName==="path") ? el.dataset.n : null;
   const county = hit || countyAt(p.x, p.y);
+  /* The run is over and the map is a record of it rather than a board: a tap
+     on one of the day's five reads it back, and a tap anywhere else puts the
+     card away. No pin can be dropped either way. */
+  if(done){ browse(county); return; }
+  if(revealing) return;
   /* only worth asking when the pin missed Kentucky, which is the only time
      the reveal has anything to say about it */
   guess = {x:p.x, y:p.y, county, state: county ? null : stateAt(p.x, p.y)};
@@ -1414,12 +1481,13 @@ function lockIn(){
   exacts[round] = exact;
   dists[round] = mi;
   strays[round] = !guess.county;
+  /* kept rather than re-rolled, because the headlines are dealt at random:
+     a county tapped twice after the run would otherwise be ribbed twice in
+     two different ways, which reads as the page losing its place */
+  verdicts[round] = verdict(mi, exact, name, guess.county, guess.state);
   /* written per round, not per run: a tab that goes away between rounds
      should cost the round it was on, not the four before it */
-  record.day = iso; record.n = round + 1;
-  record.scores = scores; record.exacts = exacts;
-  record.dists = dists; record.strays = strays;
-  writeRecord(record);
+  saveDay(round + 1);
   /* the round is settled: panning and zooming stay live so the reveal can be
      studied, but the map stops accepting pins */
   revealing = true;
@@ -1429,7 +1497,7 @@ function lockIn(){
   link.setAttribute("opacity", exact?"0":"1");
 
   readout.innerHTML = "";
-  const v = verdict(mi, exact, name, guess.county, guess.state);
+  const v = verdicts[round];
   /* a dead-on guess has nowhere to fly, so it lands at once */
   revealAnswer(guess, c, !exact, ()=>{
     if(target) target.classList.add("hit");
@@ -1581,7 +1649,7 @@ function wirePop(d, closer, tapOutside){
 const dlg = document.getElementById("results");
 wirePop(dlg, document.getElementById("resClose"));
 markMore(dlg);
-const openResults = ()=>openPop(dlg);
+const openResults = ()=>{ hideBrowse(); openPop(dlg); };
 
 /* Welcome sheet, shown on every load. "How to play" reopens it after it is
    dismissed. Every dismissal — button, X, Esc, backdrop — arrives as the
@@ -1690,17 +1758,15 @@ function finish(silent){
     record.streak = record.last === dayBefore(iso) ? (record.streak || 0) + 1 : 1;
     record.last = iso;
   }
-  record.day = iso; record.n = 5;
-  record.scores = scores; record.exacts = exacts;
-  record.dists = dists; record.strays = strays;
-  writeRecord(record);
+  saveDay(5);
   document.getElementById("step").textContent = "Done";
   const target = document.getElementById("target");
   target.classList.add("ending");
   target.textContent = endingFor(total);
   lockBtn.style.display = "none";
-  readout.innerHTML = "";
   hideReveal();
+  mapbox.classList.add("browsable");
+  browseHint();
   /* the run is over, so no round is in play: all five sit at the same weight,
      which is the map of the day you are left looking at */
   stopFlight();
@@ -1776,6 +1842,7 @@ function restore(){
   if(!record || record.day !== iso || !record.n) return false;
   scores = record.scores || []; exacts = record.exacts || [];
   dists = record.dists || [];  strays = record.strays || [];
+  verdicts = record.verdicts || [];
   if(scores.length < record.n) return false;          // half-written: start over
   played.push(...puzzle.slice(0, record.n));
   if(record.n < 5){ round = record.n; startRound(); return true; }
