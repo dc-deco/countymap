@@ -371,8 +371,20 @@ html.intro .wrap{opacity:0;visibility:hidden}
 html.intro body::before{opacity:1}
 #welcome::backdrop{background:rgba(22,30,26,.34)}
 @media (prefers-reduced-motion:no-preference){
-  .wrap{transition:opacity .28s ease}
-  body::before{transition:opacity .45s ease}
+  /* The three pieces overlap rather than queue: the sheet starts leaving, the
+     board is already coming up underneath it, and the landscape takes longest
+     of all to settle back to a whisper — so the eye is handed from one to the
+     next instead of watching each finish. */
+  .wrap{transition:opacity .42s ease}
+  body::before{transition:opacity .7s ease}
+  /* translate and scale rather than transform, which the non-modal fallback
+     needs for its own centring */
+  dialog.pop{transition:opacity .32s ease, translate .32s cubic-bezier(.32,.72,.4,1),
+             scale .32s cubic-bezier(.32,.72,.4,1)}
+  dialog.pop::backdrop{transition:opacity .32s ease}
+  dialog.pop.leaving{opacity:0;translate:0 10px;scale:.978}
+  dialog.pop.leaving::backdrop{opacity:0}
+  dialog.pop.entering{opacity:0;translate:0 8px;scale:.984}
 }
 dialog.pop .x{
   position:absolute;top:10px;right:10px;z-index:2;width:36px;height:36px;padding:0;
@@ -1391,8 +1403,14 @@ function markMore(d){
   test();
 }
 
+const LEAVE_MS = 320;
 function openPop(d){
   document.documentElement.classList.add("locked");
+  d.classList.remove("leaving");
+  d._leaving = false;
+  /* placed before it is shown and lifted on the next frame, so the browser has
+     a from-state to animate out of */
+  d.classList.add("entering");
   if(typeof d.showModal === "function" && !d.open) d.showModal();
   else d.setAttribute("open","");
   const sheet = d.querySelector(".sheet");
@@ -1404,17 +1422,34 @@ function openPop(d){
      it is still inside the dialog, so Esc and a screen reader behave, but no
      control is wearing a ring until someone actually tabs to it. */
   d.focus({preventScroll:true});
+  requestAnimationFrame(()=>requestAnimationFrame(()=>d.classList.remove("entering")));
 }
-function closePop(d){
+function shutPop(d){
+  d.classList.remove("leaving");
+  d._leaving = false;
   if(typeof d.close === "function") d.close();
   else { d.removeAttribute("open"); d.dispatchEvent(new Event("close")); }
   releaseLock();
+}
+function closePop(d){
+  if(d._leaving) return;
+  /* The page behind is told now, not when the sheet has gone: the board fading
+     up while the sheet is still on its way out is the whole difference between
+     a hand-off and two separate events. */
+  if(d.onLeave) d.onLeave();
+  if(reduceMotion.matches || typeof d.close !== "function"){ shutPop(d); return; }
+  d._leaving = true;
+  d.classList.add("leaving");
+  setTimeout(()=>shutPop(d), LEAVE_MS);
 }
 function wirePop(d, closer, tapOutside){
   if(closer) closer.onclick = ()=>closePop(d);
   /* Esc and backdrop dismissal go through the dialog's own close event, so the
      scroll lock is released no matter how the sheet was dismissed. */
   d.addEventListener("close", releaseLock);
+  /* Esc closes a dialog itself, instantly; take it over so it leaves like
+     everything else does */
+  d.addEventListener("cancel", e=>{ e.preventDefault(); closePop(d); });
   /* Tapping beside the sheet closes the welcome, where getting out of the way
      is the whole point. The results do not take it: that sheet is the end of
      the run and the only place the share button lives, and a stray tap while
@@ -1484,6 +1519,7 @@ function driftIn(){
 
 svg.addEventListener("pointerdown", ()=>{ stopBeat(); stopDrift(); });
 
+welcome.onLeave = ()=>document.documentElement.classList.remove("intro");
 welcome.addEventListener("close", ()=>{
   document.documentElement.classList.remove("intro");
   maybeBeat();
