@@ -1390,14 +1390,31 @@ function maybeBeat(){ if(round === 0 && !guess && !done && !mapTouched) edgePath
 function stopDrift(){
   if(drift !== null){ cancelAnimationFrame(drift); drift = null; }
 }
+/* Posing and gliding are two moments, not one. Doing both when the sheet
+   finished leaving meant the map jumped to its starting pose in a single
+   frame, in full view, and only then began to glide — a flinch, and then a
+   movement. The pose is taken at the instant the sheet starts to go, while
+   the board is still at zero opacity and nothing can be seen to move; the
+   glide runs a third of a second later, by which time the board is three
+   quarters up and there is something to watch it in. */
+let driftStart = null;
+function poseDrift(){
+  if(reduceMotion.matches || round !== 0 || guess || done || mapTouched) return;
+  const k = 0.84, w = FULL.w * k;
+  driftStart = {x: FULL.x + (FULL.w - w) * 0.76, y: FULL.y + (FULL.h - FULL.h * k) * 0.44, w};
+  setView({...driftStart});
+}
 function driftIn(after){
   const then = () => { if(after) after(); };
-  if(reduceMotion.matches || round !== 0 || guess || done || mapTouched){ then(); return; }
+  const from = driftStart; driftStart = null;
+  if(!from || reduceMotion.matches || round !== 0 || guess || done || mapTouched){
+    /* nothing to glide, but the pose may still be showing: only leave it if a
+       hand is on the map, which is the one case where it is theirs to keep */
+    if(from && !mapTouched) setView({...FULL});
+    then(); return;
+  }
   stopDrift();
-  const k = 0.84, w = FULL.w * k;
-  const from = {x: FULL.x + (FULL.w - w) * 0.76, y: FULL.y + (FULL.h - FULL.h * k) * 0.44, w};
   const dur = 950, t0 = performance.now();
-  setView({...from});
   const step = now => {
     const t = Math.min(1, (now - t0) / dur), e = easeOut(t);
     setView({x: from.x + (FULL.x - from.x) * e,
@@ -1413,7 +1430,10 @@ function driftIn(after){
 
 svg.addEventListener("pointerdown", ()=>{ mapTouched = true; stopBeat(); stopDrift(); });
 
-welcome.onLeave = ()=>document.documentElement.classList.remove("intro");
+welcome.onLeave = ()=>{
+  document.documentElement.classList.remove("intro");
+  poseDrift();
+};
 welcome.addEventListener("close", ()=>{
   document.documentElement.classList.remove("intro");
   /* One thing at a time. The board is still fading up and the map is still
