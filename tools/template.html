@@ -871,6 +871,29 @@ function hideBrowse(){
   browseHint();
 }
 
+/* Off-card taps. A card you cannot dismiss by tapping beside it does not read
+   as a card on a phone, so both of these take one -- though "dismiss" means
+   something different for each. The reveal is a result with a step attached,
+   so tapping off it takes the step; the browse card is a reference, so
+   tapping off it simply goes away.
+
+   Buttons, links and dialogs are excluded: the zoom controls, How to play and
+   the byline all sit outside the card and all had jobs of their own before
+   this. So is the map, which runs its own pointer handling -- the only code
+   here that can tell a tap from a pan or a pinch. */
+function offCard(){ if(done) hideBrowse(); else advance(); }
+document.addEventListener("click", e=>{
+  if(revealBox.hidden) return;
+  if(e.target.closest(".reveal, button, a, dialog, .mapbox")) return;
+  offCard();
+});
+/* Esc reaches the browse card, which no dialog is covering. Mid-run it is
+   left alone: a keystroke that advances a round is a keystroke that skips a
+   county, and Next county is already the focused thing on the page. */
+addEventListener("keydown", e=>{
+  if(e.key === "Escape" && done && !revealBox.hidden) hideBrowse();
+});
+
 const FULL = {x:0, y:0, w:__SVG_W__, h:__SVG_H__};
 const MAX_ZOOM = 7;
 let view = {...FULL};
@@ -1037,7 +1060,11 @@ function endPtr(e){
      on one of the day's five reads it back, and a tap anywhere else puts the
      card away. No pin can be dropped either way. */
   if(done){ browse(county); return; }
-  if(revealing) return;
+  /* Mid-reveal, a tap on the map takes the card's step. Gated on the card
+     being up rather than on revealing, because the answer flies for up to
+     460ms before the card lands and a tap in that window would skip a fact
+     nobody had been shown yet. */
+  if(revealing){ if(!revealBox.hidden) advance(); return; }
   /* only worth asking when the pin missed Kentucky, which is the only time
      the reveal has anything to say about it */
   guess = {x:p.x, y:p.y, county, state: county ? null : stateAt(p.x, p.y)};
@@ -1496,11 +1523,13 @@ function wirePop(d, closer, tapOutside){
   /* Esc closes a dialog itself, instantly; take it over so it leaves like
      everything else does */
   d.addEventListener("cancel", e=>{ e.preventDefault(); closePop(d); });
-  /* Tapping beside the sheet closes the welcome, where getting out of the way
-     is the whole point. The results do not take it: that sheet is the end of
-     the run and the only place the share button lives, and a stray tap while
-     reading down the five counties should not throw it away. The X is right
-     there, and it cannot be pressed by accident. */
+  /* Tapping beside the sheet closes both of them. The results held out for a
+     while, on the grounds that a stray tap while reading down the five
+     counties would throw away the only place the share button lives -- which
+     was true when losing the sheet meant losing the run. It is not true now:
+     See your score sits on the page for good and the day survives a reload,
+     so a stray tap costs one tap to undo. Esc already closed it; this only
+     makes the thumb's version agree with the keyboard's. */
   if(!tapOutside) return;
   /* A click on the backdrop reports the dialog as its target — but so does a
      click on the dialog's own padding, so compare against the box instead. */
@@ -1514,7 +1543,7 @@ function wirePop(d, closer, tapOutside){
 }
 
 const dlg = document.getElementById("results");
-wirePop(dlg, document.getElementById("resClose"));
+wirePop(dlg, document.getElementById("resClose"), true);
 markMore(dlg);
 const openResults = ()=>{ hideBrowse(); openPop(dlg); };
 
