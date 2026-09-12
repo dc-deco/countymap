@@ -83,6 +83,23 @@ body::before{
 }`;
 }
 
+/* The favicon is the state itself, drawn from the same outline the page uses,
+   so it costs one path and no extra file. Cropped to Kentucky's own box or it
+   would be a speck in the middle of a lot of empty frame. */
+const favicon = (() => {
+  const nums = C.outline.match(/-?\d+(\.\d+)?/g).map(Number);
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let i = 0; i < nums.length; i += 2) {
+    x0 = Math.min(x0, nums[i]);   x1 = Math.max(x1, nums[i]);
+    y0 = Math.min(y0, nums[i+1]); y1 = Math.max(y1, nums[i+1]);
+  }
+  const pad = (x1 - x0) * 0.05, side = Math.max(x1 - x0, y1 - y0) + pad * 2;
+  const vx = (x0 + x1) / 2 - side / 2, vy = (y0 + y1) / 2 - side / 2;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vx.toFixed(1)} ${vy.toFixed(1)} ${side.toFixed(1)} ${side.toFixed(1)}">` +
+    `<path d="${C.outline}" fill="#2C3A33" stroke="#2C3A33" stroke-width="${(side*0.035).toFixed(1)}" stroke-linejoin="round"/></svg>`;
+  return 'data:image/svg+xml,' + encodeURIComponent(svg);
+})();
+
 const SVG_W = C.svg_w, SVG_H = C.svg_h;
 const K = SVG_W / frame.px_w;
 const FRAME = { k:+K.toFixed(10), ox:frame.org_x, oy:frame.org_y, world:Math.pow(2,frame.z)*256 };
@@ -122,6 +139,7 @@ const subs = {
   __BACKDROP_CSS__: backdropCss,
   __FONT_CSS__: fontCss,
   __WELCOME_IMG__: welcomeImg,
+  __FAVICON__: favicon,
   __SHIELD_FILL__: shield('shield-fill.webp'),
   __SHIELD_INK__: shield('shield-ink.webp'),
 };
