@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>County As Hell - A Kentucky map game</title>
-<meta name="description" content="A daily Kentucky geography game. Five counties, five pins, one map. Come back tomorrow for five more.">
+<meta name="description" content="Think you know Kentucky? Play County As Hell, a daily geography game that challenges you to locate five Kentucky counties on the map.">
 <link rel="canonical" href="https://countyashell.com/">
 <meta name="theme-color" content="#E7EBE8">
 <!-- The whole game is one file, but a link preview cannot be: Open Graph will
@@ -106,10 +106,11 @@ h1{font-size:15px;font-weight:700;letter-spacing:.05em;margin:0}
   /* The frame carries terrain well past Kentucky, and on a short screen that
      margin is the first thing that can go. Capping the box clips the frame
      top and bottom — the state stays centred and the same size — rather than
-     pushing Lock it in off the bottom of the page. 340px is everything else
-     the screen has to hold. */
-  max-height:calc(100vh - 340px);
-  max-height:calc(100dvh - 340px);
+     pushing Lock it in off the bottom of the page. The figure is everything
+     else the screen has to hold, so it moves when that does: the footer
+     gaining two lines of copy put a 7px scroll on a 640-tall phone. */
+  max-height:calc(100vh - 362px);
+  max-height:calc(100dvh - 362px);
 }
 /* below the wrap's max width the column is the screen, so let the map reach
    the edges: wider map, and by its fixed aspect ratio, a taller one too */
@@ -685,7 +686,9 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <div class="more" aria-hidden="true"></div>
 </dialog>
 
-<p class="byline">A Kentucky map game by <a href="https://dandecoste.com" target="_blank" rel="noopener noreferrer">Dan DeCoste</a></p>
+<p class="byline">County As Hell is a daily Kentucky map game by
+<a href="https://dandecoste.com" target="_blank" rel="noopener noreferrer">Dan DeCoste</a>.
+Five counties. Five guesses. See how well you really know the Commonwealth.</p>
 </div>
 
 <script>
