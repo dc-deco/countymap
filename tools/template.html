@@ -412,6 +412,10 @@ dialog.pop #copy{width:100%}
 /* County, what it paid, how far off you were, then the fact. No rules between
    the five — the gap between them does that work, and five hairlines under a
    pill button read as a table nobody asked for. */
+/* the record, in the same small-caps voice the header keeps its date in */
+.tally{font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-2);margin:6px 0 0}
+.tally[hidden]{display:none}
 .recap{list-style:none;margin:26px 0 0;padding:0}
 .recap li{padding:0;margin-top:24px}
 .recap li:first-child{margin-top:0}
@@ -546,6 +550,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <p class="step" id="resStep"></p>
   <h2 class="resverdict" id="resTitle"></h2>
   <p class="big" id="resScore"></p>
+  <p class="tally" id="resTally"></p>
   <pre id="share"></pre>
   <button id="copy" class="primary">Share your score</button>
   <ol class="recap" id="recap"></ol>
@@ -562,6 +567,51 @@ Five counties. Five guesses. See how well you really know the Commonwealth.</p>
 const NAMES = __NAMES__;
 const CO = __CENT__;
 const FACTS = __FACTS__;
+/* What the game remembers, which is one small object in this browser and
+   nowhere else: nothing is sent anywhere and there is nothing to opt into.
+
+   Every read and write is wrapped, because localStorage is not a place you
+   are entitled to — a private window can refuse it and older Safari threw on
+   write. A refusal costs the day's record and nothing else: the game runs the
+   way it always did.
+
+   Worth knowing about the durability: iOS clears script storage for a site
+   you have not opened in seven days, so a player who misses a week loses the
+   streak and the fact they ever had one. There is no fix for that short of
+   accounts. */
+const STORE = "countyashell/v1";
+function readRecord(){
+  try{
+    const raw = localStorage.getItem(STORE);
+    const d = raw && JSON.parse(raw);
+    return (d && d.v === 1) ? d : null;
+  }catch(e){ return null; }
+}
+function writeRecord(d){
+  try{ localStorage.setItem(STORE, JSON.stringify(d)); }catch(e){}
+}
+/* Written and read back once, because a browser that refuses storage would
+   otherwise be shown a tally it is not keeping — "1 day played", every day,
+   forever. */
+const canStore = (()=>{
+  try{
+    const k = STORE + "/probe";
+    localStorage.setItem(k, "1");
+    const ok = localStorage.getItem(k) === "1";
+    localStorage.removeItem(k);
+    return ok;
+  }catch(e){ return false; }
+})();
+const record = readRecord() || {v:1, runs:0, streak:0, last:null};
+/* Yesterday, by the same Eastern clock the puzzle turns on, so a streak
+   counts days of the game rather than days of the player's own timezone. */
+function dayBefore(d){
+  const [y, m, dd] = d.split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1, dd) - 86400000);
+  const p = n => String(n).padStart(2, "0");
+  return t.getUTCFullYear() + "-" + p(t.getUTCMonth() + 1) + "-" + p(t.getUTCDate());
+}
+
 /* Neighbour states, flat rings in map units, biggest share of the frame
    first. They are never drawn — they exist so a tap that misses Kentucky can
    still be told where it landed. See tools/states.js. */
@@ -732,7 +782,7 @@ let view = {...FULL};
 /* dists and strays are for the results sheet, which reports each round again
    once the run is over */
 let round = 0, scores = [], exacts = [], dists = [], strays = [],
-    guess = null, done = false, revealing = false;
+    guess = null, done = false, revealing = false;   // all replaced by restore()
 
 /* Water is drawn in map units, so a plain stroke would grow 1:1 with zoom and
    turn every creek into a canal. Damp it: on-screen width tracks zoom^0.35. */
@@ -1198,6 +1248,12 @@ function lockIn(){
   exacts[round] = exact;
   dists[round] = mi;
   strays[round] = !guess.county;
+  /* written per round, not per run: a tab that goes away between rounds
+     should cost the round it was on, not the four before it */
+  record.day = iso; record.n = round + 1;
+  record.scores = scores; record.exacts = exacts;
+  record.dists = dists; record.strays = strays;
+  writeRecord(record);
   /* the round is settled: panning and zooming stay live so the reveal can be
      studied, but the map stops accepting pins */
   revealing = true;
@@ -1439,6 +1495,9 @@ welcome.onLeave = ()=>{
 };
 welcome.addEventListener("close", ()=>{
   document.documentElement.classList.remove("intro");
+  /* Coming back to a day already finished, the score is the thing they came
+     for — but not stacked on top of the welcome. */
+  if(done){ openResults(); return; }
   /* One thing at a time. The board is still fading up and the map is still
      gliding into place when the sheet goes; starting the outline breathing on
      top of that made three movements at once and the pulse read as a flinch.
@@ -1454,9 +1513,21 @@ document.getElementById("howto").onclick = ()=>{
 };
 openPop(welcome);
 
-function finish(){
+function finish(silent){
   done = true;
   const total = scores.reduce((a,s,i)=>a+s*MULT[i],0);
+  /* counted once per day: reopening a finished day must not inflate anything,
+     and a day that follows the last one played continues the streak rather
+     than starting a new one */
+  if(record.last !== iso){
+    record.runs = (record.runs || 0) + 1;
+    record.streak = record.last === dayBefore(iso) ? (record.streak || 0) + 1 : 1;
+    record.last = iso;
+  }
+  record.day = iso; record.n = 5;
+  record.scores = scores; record.exacts = exacts;
+  record.dists = dists; record.strays = strays;
+  writeRecord(record);
   document.getElementById("step").textContent = "Done";
   const target = document.getElementById("target");
   target.classList.add("ending");
@@ -1485,6 +1556,13 @@ function finish(){
   big.appendChild(of);
   document.getElementById("share").textContent = share;
   wireShare(share);
+
+  const tally = document.getElementById("resTally");
+  tally.hidden = !canStore || !record.runs;
+  /* one in a row is not a streak, so it goes unsaid */
+  tally.textContent = tally.hidden ? ""
+    : `${record.runs} day${record.runs === 1 ? "" : "s"} played` +
+      (record.streak > 1 ? ` \u00B7 ${record.streak} in a row` : "");
 
   /* Second pass at the day's facts, which is where they actually stick.
      Built with textContent so the copy cannot be read as markup. */
@@ -1520,10 +1598,27 @@ function finish(){
   document.getElementById("final").innerHTML =
     `<div class="final"><button id="reopen" class="primary">See your score</button></div>`;
   document.getElementById("reopen").onclick = openResults;
-  openResults();
+  if(!silent) openResults();
 }
 
-startRound();
+/* A day already played is not played again. The five counties are the same
+   for everybody, so a run you can retake until it is perfect is a score worth
+   nothing to share — and a tab that reloads itself, which iOS does to
+   anything left in the background, should not quietly wipe an afternoon.
+   Mid-run, it picks up at the round it was on. */
+function restore(){
+  if(!record || record.day !== iso || !record.n) return false;
+  scores = record.scores || []; exacts = record.exacts || [];
+  dists = record.dists || [];  strays = record.strays || [];
+  if(scores.length < record.n) return false;          // half-written: start over
+  played.push(...puzzle.slice(0, record.n));
+  if(record.n < 5){ round = record.n; startRound(); return true; }
+  round = 5;
+  finish(true);                                        // set the page up, stay quiet
+  return true;
+}
+
+if(!restore()) startRound();
 </script>
 </body>
 </html>
