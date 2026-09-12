@@ -108,6 +108,11 @@ const counties = C.counties.map(c => `<path d="${c.d}" data-n="${c.name}"/>`).jo
 const CO = {};
 for (const c of C.counties) CO[c.name] = { x:c.x, y:c.y, lon:c.lon, lat:c.lat };
 const NAMES = C.counties.map(c => c.name);
+/* Everything inlined into the page's <script> goes through this rather than
+   JSON.stringify directly: stringify leaves "<" alone, so a fact that ever
+   contained "</script>" would end the script block and take the page down.
+   The escaped form is the same JSON and parses to the same string. */
+const inline = v => JSON.stringify(v).replace(/</g, '\\u003c');
 
 /* rivers grouped by stroke width so the DOM stays small */
 const byW = new Map();
@@ -131,11 +136,11 @@ const subs = {
   __RIVERS__: rivers,
   __LAKES__: lakes,
   __URBAN__: urban,
-  __NAMES__: JSON.stringify(NAMES),
-  __CENT__: JSON.stringify(CO),
-  __FRAME__: JSON.stringify(FRAME),
-  __FACTS__: JSON.stringify(FACTS),
-  __STATES__: JSON.stringify(STATES),
+  __NAMES__: inline(NAMES),
+  __CENT__: inline(CO),
+  __FRAME__: inline(FRAME),
+  __FACTS__: inline(FACTS),
+  __STATES__: inline(STATES),
   __BACKDROP_CSS__: backdropCss,
   __FONT_CSS__: fontCss,
   __WELCOME_IMG__: welcomeImg,

@@ -1,9 +1,10 @@
 # Map pipeline
 
 `index.html` is a single self-contained file: the shaded-relief basemap is an
-inlined WebP data URI and every vector layer is inlined SVG. Nothing is fetched
-at play time. These scripts are what generated that data, kept so the map can be
-rebuilt or re-tuned rather than being a black box.
+inlined WebP data URI and every vector layer is inlined SVG. Nothing the game
+needs is fetched at play time; the only request the page makes is the Vercel
+analytics script in the template's head. These scripts are what generated that
+data, kept so the map can be rebuilt or re-tuned rather than being a black box.
 
 ## Rebuilding just the page
 
@@ -56,14 +57,15 @@ itself lives in `tools/template.html`.
 Kentucky can be told which state it landed in. These are never drawn — they
 exist only for a ray cast — so `tools/states.js` cuts them down hard: clipped
 to the map frame, simplified to 0.2 map units (about 90 m), and stored as flat
-coordinate arrays rather than SVG paths. Nine states fall inside the frame,
-653 points, 8 KB. Regenerate after any change to `frame.json` or the SVG size:
+coordinate arrays rather than SVG paths. Thirteen states fall inside the
+frame, 757 points, about 12 KB. Regenerate after any change to `frame.json` or
+the SVG size:
 
 ```sh
 node tools/states.js
 ```
 
-Thirteen states fall inside the current frame. Each one the reveal can name
+Each state in the frame that the reveal can name
 needs a line in `STATE_HEADS` in the template, or it falls back to naming
 itself.
 
@@ -117,6 +119,8 @@ Run from a scratch directory; each step writes into it.
 | 2 | `curl -K dem/urls.txt --parallel` | 650 Terrarium elevation tiles (z10, ~30 MB) |
 | 3 | `mosaic.py` | `elev.npy` — stitched, despeckled elevation grid |
 | 4 | `relief.py` | `relief_*.webp` + `frame.json` — hillshade & tint |
+| 5 | `geom.js` | `counties.json` — projected county paths, interior points, lon/lat |
+| 6 | `water.js` | `water.json` — rivers, lakes, urban areas |
 
 The crop in `relief.py` (`CW,CE,CS,CN`) sets the frame's aspect ratio, and
 that ratio is what fixes the map's height on the page: the element is as wide
@@ -135,8 +139,6 @@ The DEM bbox in `tiles.py` has to cover the crop with room to spare; it
 currently runs 34.45-41.10N, two tile rows past each edge. Changing the crop
 means re-running steps 5-6 and `states.js` as well, and regenerating the
 border-distance reference with `refcases.py`, which stores map coordinates.
-| 5 | `geom.js` | `counties.json` — projected county paths, interior points, lon/lat |
-| 6 | `water.js` | `water.json` — rivers, lakes, urban areas |
 
 ## Link previews
 
@@ -174,7 +176,7 @@ Lexington and Frankfort keep. It used to be local, which meant that between
 midnight in the east and midnight in the west, half the country was on
 tomorrow's counties: Kentucky straddles two zones, so the state split for an
 hour every night, and a shared score could name a puzzle a friend had not been
-given yet. `node tools/daycheck.js` sets seven devices in seven zones to one
+given yet. `node tools/daycheck.js` sets eleven devices in eleven zones to one
 instant and asserts they all draw the same five.
 
 `node tools/rotation.js [days]` replays the shipped generator over consecutive

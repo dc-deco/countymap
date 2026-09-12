@@ -930,7 +930,9 @@ function endPtr(e){
     start={x:p.x,y:p.y,view:{...view}}; moved=true;
     return;
   }
-  const tap = was===1 && !moved && !done && !revealing;
+  /* a cancelled pointer never tapped anything: the browser or the OS took the
+     touch away, and a pin the player did not put down would cost the round */
+  const tap = was===1 && !moved && !done && !revealing && e.type !== "pointercancel";
   start=null;
   settleView();
   if(!tap) return;
