@@ -712,6 +712,26 @@ const FACTS = {"Adair":"Columbia is home to Lindsey Wilson College, and novelist
    you have not opened in seven days, so a player who misses a week loses the
    streak and the fact they ever had one. There is no fix for that short of
    accounts. */
+/* --- Testing hatches -------------------------------------------------------
+
+   A finished day is closed, which is right for players and miserable for
+   anyone trying the game repeatedly. Three query parameters open it up:
+
+     ?fresh          forget today's board, keep the streak and the day count
+     ?wipe           forget everything, arrive as a first-time visitor
+     ?day=2026-09-15 play that day's five counties instead of today's
+
+   ?fresh and ?wipe strip themselves out of the address bar once they have
+   run, so the next reload behaves like an ordinary return visit -- otherwise
+   there would be no way to test that returning works at all. ?day stays,
+   because a reload should land back on the day under test.
+
+   These are typed, not hidden: anyone who learns the words can replay a day.
+   The day lock is there to make a shared score mean something, not to stop a
+   determined person, and a hatch you cannot type on a phone is no use. */
+const params = new URLSearchParams(location.search);
+const forced = /^\d{4}-\d{2}-\d{2}$/.test(params.get("day") || "") ? params.get("day") : null;
+
 const STORE = "countyashell/v1";
 function readRecord(){
   try{
@@ -735,7 +755,20 @@ const canStore = (()=>{
     return ok;
   }catch(e){ return false; }
 })();
+if(params.has("wipe")){ try{ localStorage.removeItem(STORE); }catch(e){} }
 const record = readRecord() || {v:1, runs:0, streak:0, last:null};
+/* ?fresh drops the day's board and leaves the history alone. Note that
+   finish() only counts a run when record.last is not today, so replaying a
+   day this way cannot inflate the streak or the day count. */
+if(params.has("fresh")){
+  for(const k of ["day","n","scores","exacts","dists","strays"]) delete record[k];
+  writeRecord(record);
+}
+if(params.has("fresh") || params.has("wipe")){
+  const u = new URL(location.href);
+  u.searchParams.delete("fresh"); u.searchParams.delete("wipe");
+  history.replaceState(null, "", u);
+}
 /* Yesterday, by the same Eastern clock the puzzle turns on, so a streak
    counts days of the game rather than days of the player's own timezone. */
 function dayBefore(d){
@@ -817,7 +850,7 @@ function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t
    no time zone database falls back to local time, which is wrong by at most a
    day and better than not running. */
 const DAY_ZONE = "America/New_York";
-const today = new Date();
+const today = forced ? new Date(forced + "T12:00:00Z") : new Date();
 function localIso(d){
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }

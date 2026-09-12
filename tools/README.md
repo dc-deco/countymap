@@ -184,6 +184,31 @@ the tiers cut the space from the 190,578,024 sets a flat draw would give to
 about 55 million, and make an EASY county three times likelier on a given day
 than a HARD one.
 
+## Playing a day twice
+
+Finishing locks the day, so the ordinary way to test the game — play it, play
+it again — stops working after one run. Three query parameters reopen it:
+
+| | |
+|---|---|
+| `?fresh` | forget today's board, keep the streak and the day count |
+| `?wipe` | forget everything, arrive as a first-time visitor |
+| `?day=2026-09-15` | play that day's five counties instead of today's |
+
+`?fresh` and `?wipe` remove themselves from the address bar once they have
+run, so the next reload behaves like an ordinary return visit — otherwise
+there would be no way to test that returning works. `?day` stays, so a reload
+lands back on the day under test; it also drives the date in the header and
+the key the day is stored under, so persistence can be tested on any date. A
+`?day` that is not `YYYY-MM-DD` is ignored.
+
+Replaying with `?fresh` cannot inflate the tally: `finish()` only counts a run
+when the record's last day is not the day just played.
+
+These are typed, not hidden. Anyone who learns the words can replay a day —
+the lock exists to make a shared score mean something, not to stop someone
+determined, and a hatch you cannot type on a phone is no use on a phone.
+
 `facts.json` is hand-maintained, not generated — it is not part of this
 pipeline and survives a full map rebuild.
 
