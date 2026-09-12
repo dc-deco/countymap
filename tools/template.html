@@ -107,7 +107,7 @@ svg#map{display:block;flex:0 0 100%;width:100%;height:auto;aspect-ratio:__SVG_W_
      to mean "look here" means it in both places */
   50%    {stroke:#C69E34;stroke-width:3.6;stroke-opacity:1}
 }
-#edge.beat{animation:edgebeat 1.4s ease-in-out 2}
+#edge.beat{animation:edgebeat 1.9s ease-in-out 2}
 @media (prefers-reduced-motion: reduce){#edge.beat{animation:none}}
 /* the answer's fill fades up as the line lands on it, and the round before
    it fades back down to goldenrod as the next one starts */
@@ -1349,8 +1349,14 @@ markMore(welcome);
    very first pin — a returning player has already been told. Any touch of the
    map calls it off, including a pan that drops no pin. */
 const edgePath = document.getElementById("edge");
+/* Set by the first touch of the map, and never unset: both the glide and the
+   breathing exist to tell somebody the map is theirs to move, and somebody
+   already moving it has been told. It matters because the sheet takes a third
+   of a second to leave, and a hand that quick would otherwise have the map
+   glide out from under it. */
+let mapTouched = false;
 function stopBeat(){ edgePath.classList.remove("beat"); }
-function maybeBeat(){ if(round === 0 && !guess && !done) edgePath.classList.add("beat"); }
+function maybeBeat(){ if(round === 0 && !guess && !done && !mapTouched) edgePath.classList.add("beat"); }
 
 /* The map also settles into place rather than simply being there: it starts a
    little tight and off to one side and glides out to the full frame, which
@@ -1365,8 +1371,9 @@ function maybeBeat(){ if(round === 0 && !guess && !done) edgePath.classList.add(
 function stopDrift(){
   if(drift !== null){ cancelAnimationFrame(drift); drift = null; }
 }
-function driftIn(){
-  if(reduceMotion.matches || round !== 0 || guess || done) return;
+function driftIn(after){
+  const then = () => { if(after) after(); };
+  if(reduceMotion.matches || round !== 0 || guess || done || mapTouched){ then(); return; }
   stopDrift();
   const k = 0.84, w = FULL.w * k;
   const from = {x: FULL.x + (FULL.w - w) * 0.76, y: FULL.y + (FULL.h - FULL.h * k) * 0.44, w};
@@ -1380,17 +1387,23 @@ function driftIn(){
     if(t < 1){ drift = requestAnimationFrame(step); return; }
     drift = null;
     setView({...FULL});
+    then();
   };
   drift = requestAnimationFrame(step);
 }
 
-svg.addEventListener("pointerdown", ()=>{ stopBeat(); stopDrift(); });
+svg.addEventListener("pointerdown", ()=>{ mapTouched = true; stopBeat(); stopDrift(); });
 
 welcome.onLeave = ()=>document.documentElement.classList.remove("intro");
 welcome.addEventListener("close", ()=>{
   document.documentElement.classList.remove("intro");
-  maybeBeat();
-  driftIn();
+  /* One thing at a time. The board is still fading up and the map is still
+     gliding into place when the sheet goes; starting the outline breathing on
+     top of that made three movements at once and the pulse read as a flinch.
+     It waits for the glide to finish, and then has the screen to itself.
+     Touching the map cancels the glide without ever calling this, which is
+     right — somebody already using the map does not need telling. */
+  driftIn(maybeBeat);
 });
 document.getElementById("welGo").onclick = ()=>closePop(welcome);
 document.getElementById("howto").onclick = ()=>{
