@@ -153,6 +153,12 @@ svg#map{display:block;flex:0 0 100%;width:100%;height:auto;aspect-ratio:__SVG_W_
   stroke-width:calc(var(--cw,.75) * 1.87);stroke-opacity:.65}
 #counties path.hit{fill:rgba(228,169,60,.45);stroke:#2A2013;
   stroke-width:calc(var(--cw,.75) * 2.67);stroke-opacity:1}
+/* Once a round is settled the map is there to be poked at, and the county
+   under the finger lights up a full goldenrod — brighter than the answer and
+   the played, so it reads as "the one you just touched" rather than as part
+   of the day's record. Last in the cascade, so it wins over both. */
+#counties path.peek{fill:rgba(250,196,32,.62);stroke:#3A2B08;
+  stroke-width:calc(var(--cw,.75) * 2.67);stroke-opacity:1}
 /* Pill-shaped, and lifted off the page a little. Square corners on a panel
    the same colour as the card around it read as a box, not something to
    press; the radius and the shadow are what say "button" before the label
@@ -796,6 +802,40 @@ function hideReveal(){
   document.body.classList.remove("revealing");
 }
 
+/* Poking at the map once a round is settled. While the reveal card is up the
+   tapped county takes over the fact slot at the bottom of the card, under
+   the verdict, which stays put. After the run the card comes back for it
+   alone: name up top where the verdict was, the seat where the distance was,
+   the fact below, and a button to put it away. One county at a time. */
+let peeked = null;
+function clearPeek(){
+  if(peeked){ peeked.classList.remove("peek"); peeked = null; }
+}
+function peek(name){
+  const path = countyPaths.find(x => x.dataset.n === name);
+  if(!path) return;
+  clearPeek();
+  peeked = path;
+  path.classList.add("peek");
+  revealLede.textContent = name + " County";
+  revealFact.textContent = FACTS[name] || "";
+  if(!done) return;
+  revealHead.className = "rhead";
+  revealVerdict.textContent = name + " County";
+  revealPts.textContent = "";
+  revealLine.textContent = `County seat: ${seatOf(name)}.`;
+  revealLede.textContent = "";
+  nextBtn.textContent = "Done looking";
+  nextBtn.onclick = closePeek;
+  revealBox.querySelector(".revealbody").scrollTop = 0;
+  revealBox.hidden = false;
+  document.body.classList.add("revealing");
+}
+function closePeek(){
+  clearPeek();
+  hideReveal();
+}
+
 const FULL = {x:0, y:0, w:__SVG_W__, h:__SVG_H__};
 const MAX_ZOOM = 7;
 let view = {...FULL};
@@ -955,7 +995,7 @@ function endPtr(e){
   }
   /* a cancelled pointer never tapped anything: the browser or the OS took the
      touch away, and a pin the player did not put down would cost the round */
-  const tap = was===1 && !moved && !done && !revealing && e.type !== "pointercancel";
+  const tap = was===1 && !moved && e.type !== "pointercancel";
   start=null;
   settleView();
   if(!tap) return;
@@ -963,6 +1003,9 @@ function endPtr(e){
   const el = document.elementFromPoint(e.clientX,e.clientY);
   const hit = (el && el.tagName==="path") ? el.dataset.n : null;
   const county = hit || countyAt(p.x, p.y);
+  /* the round is settled, or the day is: a tap asks about a county instead
+     of placing a pin */
+  if(done || revealing){ if(county) peek(county); return; }
   /* only worth asking when the pin missed Kentucky, which is the only time
      the reveal has anything to say about it */
   guess = {x:p.x, y:p.y, county, state: county ? null : stateAt(p.x, p.y)};
@@ -1179,6 +1222,7 @@ function startRound(){
   gPin.setAttribute("opacity","0");
   gTruth.setAttribute("opacity","0");
   link.setAttribute("opacity","0");
+  clearPeek();
   paintPlayed();
   document.getElementById("step").textContent = `Round ${round+1} / 5`;
   document.getElementById("target").textContent = puzzle[round] + " County";
@@ -1342,6 +1386,8 @@ function lockIn(){
   revealAnswer(guess, c, !exact, ()=>{
     if(target) target.classList.add("hit");
     showReveal(name, s, v, hinted);
+    /* a county tapped while the line was still flying keeps its place */
+    if(peeked) peek(peeked.dataset.n);
   });
   drawTape();
   /* Lock it in has done its job; advancing now belongs to the card, so the
@@ -1617,6 +1663,7 @@ function finish(silent){
   /* the run is over, so no round is in play: all five sit at the same weight,
      which is the map of the day you are left looking at */
   stopFlight();
+  clearPeek();
   paintPlayed();
   gPin.setAttribute("opacity","0");
   gTruth.setAttribute("opacity","0");
