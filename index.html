@@ -164,10 +164,10 @@ svg#map{display:block;flex:0 0 100%;width:100%;height:auto;aspect-ratio:2000 / 2
   stroke-width:calc(var(--cw,.75) * 1.87);stroke-opacity:.65}
 #counties path.hit{fill:rgba(228,169,60,.45);stroke:#2A2013;
   stroke-width:calc(var(--cw,.75) * 2.67);stroke-opacity:1}
-/* Once a round is settled the map is there to be poked at, and the county
-   under the finger lights up a full goldenrod — brighter than the answer and
-   the played, so it reads as "the one you just touched" rather than as part
-   of the day's record. Last in the cascade, so it wins over both. */
+/* Once the day's five are played the map is there to be poked at, and the
+   county under the finger lights up a full goldenrod — brighter than the
+   played, so it reads as "the one you just touched" rather than as part of
+   the day's record. Last in the cascade, so it wins. */
 #counties path.peek{fill:rgba(250,196,32,.62);stroke:#3A2B08;
   stroke-width:calc(var(--cw,.75) * 2.67);stroke-opacity:1}
 /* Pill-shaped, and lifted off the page a little. Square corners on a panel
@@ -935,11 +935,12 @@ function hideReveal(){
   document.body.classList.remove("revealing");
 }
 
-/* Poking at the map once a round is settled. While the reveal card is up the
-   tapped county takes over the fact slot at the bottom of the card, under
-   the verdict, which stays put. After the run the card comes back for it
-   alone: name up top where the verdict was, the seat where the distance was,
-   the fact below, and a button to put it away. One county at a time. */
+/* Poking at the map once the run is over. The reveal card comes back for the
+   tapped county alone: name up top where the verdict was, the seat where the
+   distance was, the fact below, and a button to put it away. One county at a
+   time. Not offered between rounds — mid-run the reveal is about the county
+   just asked, and a map that answers questions would give away the ones
+   still to come. */
 let peeked = null;
 function clearPeek(){
   if(peeked){ peeked.classList.remove("peek"); peeked = null; }
@@ -950,9 +951,7 @@ function peek(name){
   clearPeek();
   peeked = path;
   path.classList.add("peek");
-  revealLede.textContent = name + " County";
   revealFact.textContent = FACTS[name] || "";
-  if(!done) return;
   revealHead.className = "rhead";
   revealVerdict.textContent = name + " County";
   revealPts.textContent = "";
@@ -1136,9 +1135,10 @@ function endPtr(e){
   const el = document.elementFromPoint(e.clientX,e.clientY);
   const hit = (el && el.tagName==="path") ? el.dataset.n : null;
   const county = hit || countyAt(p.x, p.y);
-  /* the round is settled, or the day is: a tap asks about a county instead
-     of placing a pin */
-  if(done || revealing){ if(county) peek(county); return; }
+  /* the day is done: a tap asks about a county instead of placing a pin.
+     Mid-run the map only takes pins, and only before the round is locked. */
+  if(done){ if(county) peek(county); return; }
+  if(revealing) return;
   /* only worth asking when the pin missed Kentucky, which is the only time
      the reveal has anything to say about it */
   guess = {x:p.x, y:p.y, county, state: county ? null : stateAt(p.x, p.y)};
@@ -1355,7 +1355,6 @@ function startRound(){
   gPin.setAttribute("opacity","0");
   gTruth.setAttribute("opacity","0");
   link.setAttribute("opacity","0");
-  clearPeek();
   paintPlayed();
   document.getElementById("step").textContent = `Round ${round+1} / 5`;
   document.getElementById("target").textContent = puzzle[round] + " County";
@@ -1519,8 +1518,6 @@ function lockIn(){
   revealAnswer(guess, c, !exact, ()=>{
     if(target) target.classList.add("hit");
     showReveal(name, s, v, hinted);
-    /* a county tapped while the line was still flying keeps its place */
-    if(peeked) peek(peeked.dataset.n);
   });
   drawTape();
   /* Lock it in has done its job; advancing now belongs to the card, so the
