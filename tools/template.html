@@ -182,7 +182,17 @@ dialog.pop:focus,dialog.pop:focus-visible{outline:none}
   box-shadow:0 1px 4px rgba(20,28,24,.24);
 }
 .lockslot{position:relative;margin-top:10px}
-#lock{width:100%}
+/* Lock and hint share the row. The lock keeps the weight and the width; the
+   hint stands beside it as the lesser option, in the quieter button style,
+   and once taken it leaves the row — the seat has moved up into the readout,
+   where it stays in view. The reveal card covers the row whatever it holds. */
+.lockrow{display:flex;gap:8px;align-items:stretch}
+#lock{flex:1 1 auto;min-width:0;white-space:nowrap}
+#hint{flex:0 0 auto;padding:11px 12px;font-size:13px;white-space:nowrap;color:var(--ink-2)}
+#hint[hidden]{display:none}
+/* first press arms it, second confirms; a stray thumb should not cost half a
+   round, and a pop-up would be heavier than the moment deserves */
+#hint.armed{border-color:var(--ink);color:var(--ink);background:var(--panel)}
 .primary{background:var(--ink);color:var(--paper);border-color:var(--ink);
   box-shadow:0 2px 6px rgba(20,28,24,.26)}
 .primary:active{background:#2F3B35;box-shadow:0 1px 2px rgba(20,28,24,.2)}
@@ -320,6 +330,9 @@ body.revealing .readout,body.revealing .tape{
 .cell.hit .shield{background:var(--grass)}
 .cell.hit .shield::after{background:var(--panel)}
 .cell.hit .num{color:#fff}
+/* a hinted round says so under its marker, so the strip never shows a 50 that
+   looks like it was earned outright */
+.hintmark{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
 
 dialog.pop{
   /* a modal dialog is centred by the UA in the top layer; hand-positioning it
@@ -508,7 +521,10 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
 </div>
 
 <div class="lockslot">
-  <button id="lock" class="primary" disabled>Lock it in</button>
+  <div class="lockrow">
+    <button id="lock" class="primary" disabled>Lock it in</button>
+    <button id="hint">Hint &middot; half points</button>
+  </div>
   <div class="reveal" id="reveal" hidden>
     <div class="revealbody">
       <p class="rhead" id="revealHead"><span class="rverdict" id="revealVerdict"></span><b class="rpts" id="revealPts"></b></p>
@@ -531,6 +547,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <p class="body">Every day, we&#39;ll give you 5 of Kentucky&#39;s 120 counties. You tell us where
   the hell they are.</p>
   <p class="body">Poke around the map and drop your pin. Think you&#39;ve got it? Lock it in.</p>
+  <p class="body">Stuck? A hint tells you the county seat, for half the points.</p>
   <p class="body">Come back tomorrow for 5 more. Lord knows we&#39;ve got enough of &#39;em.</p>
   <button id="welGo" class="primary">Let&#39;s go</button>
   <p class="credits">Relief: USGS &amp; SRTM via Mapzen Terrain Tiles &middot; Boundaries: US Census &middot;
@@ -562,6 +579,9 @@ Five counties. Five guesses. See how well you really know the Commonwealth.</p>
 const NAMES = __NAMES__;
 const CO = __CENT__;
 const FACTS = __FACTS__;
+/* County seats, for the hint. Two counties keep two, written "A; B". */
+const SEATS = __SEATS__;
+const seatOf = name => String(SEATS[name] || "").split(/;\s*/).filter(Boolean).join(" and ");
 /* What the game remembers, which is one small object in this browser and
    nowhere else: nothing is sent anywhere and there is nothing to opt into.
 
@@ -725,6 +745,7 @@ const gPin = document.getElementById("pin");
 const gTruth = document.getElementById("truth");
 const link = document.getElementById("link");
 const lockBtn = document.getElementById("lock");
+const hintBtn = document.getElementById("hint");
 const readout = document.getElementById("readout");
 const tape = document.getElementById("tape");
 const revealBox = document.getElementById("reveal");
@@ -736,12 +757,31 @@ const revealLede = document.getElementById("revealLede");
 const revealFact = document.getElementById("revealFact");
 const nextBtn = document.getElementById("nextBtn");
 
+/* The readout is the game's one spoken line under the county name. Once a
+   hint is bought the seat leads it, whatever else the line says, so it stays
+   in view from the moment it is paid for until the pin is locked. Text only,
+   never markup. */
+function say(text){
+  readout.replaceChildren();
+  if(hinted){
+    const b = document.createElement("b");
+    b.textContent = `County seat: ${seatOf(puzzle[round])}.`;
+    readout.append(b, " ");
+  }
+  if(text){
+    const span = document.createElement("span");
+    span.className = "miles";
+    span.textContent = text;
+    readout.append(span);
+  }
+}
+
 /* Facts are set as text, never markup, so an apostrophe or a stray angle
    bracket in the copy can never break the page. */
-function showReveal(name, s, v){
+function showReveal(name, s, v, withHint){
   revealHead.className = "rhead" + (v.tone ? " " + v.tone : "");
   revealVerdict.textContent = v.head;
-  revealPts.textContent = `${s} ${s === 1 ? "pt" : "pts"}`;
+  revealPts.textContent = `${s} ${s === 1 ? "pt" : "pts"}` + (withHint ? " \u00B7 hinted" : "");
   revealLine.textContent = v.line;
   const f = FACTS[name];
   revealLede.textContent = f ? name + " County" : "";
@@ -761,8 +801,11 @@ const MAX_ZOOM = 7;
 let view = {...FULL};
 /* dists and strays are for the results sheet, which reports each round again
    once the run is over */
-let round = 0, scores = [], exacts = [], dists = [], strays = [],
+let round = 0, scores = [], exacts = [], dists = [], strays = [], hints = [],
     guess = null, done = false, revealing = false;   // all replaced by restore()
+/* the round in hand: whether the seat has been bought, and the arming timer
+   on the button that buys it */
+let hinted = false, hintArm = null;
 
 /* Water is drawn in map units, so a plain stroke would grow 1:1 with zoom and
    turn every creek into a canal. Damp it: on-screen width tracks zoom^0.35. */
@@ -927,7 +970,7 @@ function endPtr(e){
   gPin.setAttribute("transform",`translate(${p.x} ${p.y})`);
   gPin.setAttribute("opacity","1");
   lockBtn.disabled = false;
-  readout.innerHTML = `<span class="miles">Pin dropped. Move it or lock it in.</span>`;
+  say("Pin dropped. Move it or lock it in.");
 }
 svg.addEventListener("pointerup", endPtr);
 svg.addEventListener("pointercancel", endPtr);
@@ -1086,7 +1129,7 @@ function drawTape(){
     const current = i === round && !done;
     const cell = document.createElement("div");
     cell.className = "cell" + (played ? " done" : "") + (current ? " now" : "")
-                   + (played && exacts[i] ? " hit" : "");
+                   + (played && exacts[i] ? " hit" : "") + (played && hints[i] ? " hinted" : "");
     const shield = document.createElement("div");
     shield.className = "shield";
     const num = document.createElement("span");
@@ -1098,11 +1141,17 @@ function drawTape(){
     num.textContent = played ? String(scores[i]) : "";
     shield.appendChild(num);
     cell.append(shield);
+    if(played && hints[i]){
+      const mark = document.createElement("div");
+      mark.className = "hintmark";
+      mark.textContent = "hint";
+      cell.append(mark);
+    }
     /* the marker alone reads as a bare number, so spell the slot out for
        screen readers */
     cell.setAttribute("role", "listitem");
     cell.setAttribute("aria-label", played
-      ? `Round ${i+1}: ${scores[i]} points${exacts[i] ? ", dead on" : ""}.`
+      ? `Round ${i+1}: ${scores[i]} points${exacts[i] ? ", dead on" : ""}${hints[i] ? ", with a hint" : ""}.`
       : `Round ${i+1}${current ? ", current" : ""}.`);
     tape.appendChild(cell);
   }
@@ -1136,10 +1185,14 @@ function startRound(){
   lockBtn.textContent = "Lock it in";
   lockBtn.disabled = true;
   lockBtn.onclick = lockIn;
+  hinted = false;
+  resetHint();
   /* the row is reserved whether or not it has anything in it, so spend it
      telling a first-timer what to do — there is nothing else on the screen
      that says the map is the input, and it clears on the first tap */
-  readout.innerHTML = `<span class="miles">Tap the map to drop your pin.</span>`;
+  say("Tap the map to drop your pin.");
+  /* a hint bought for this round before a reload was still bought */
+  if(recordIsToday() && record.hintOn === round) takeHint();
   hideReveal();
   setView({...FULL});
   drawTape();
@@ -1206,6 +1259,45 @@ function revealAnswer(from, to, drawLine, onLand){
   });
 }
 
+/* The hint: the county seat, for half the round. Two presses, because it is
+   the one tap in the game that cannot be taken back — the first arms the
+   button and the second buys, and an armed button that is left alone stands
+   down after a moment. Once bought the seat moves up into the readout and
+   the button leaves the row. */
+const HINT_LABEL = "Hint \u00B7 half points";
+function resetHint(){
+  clearTimeout(hintArm); hintArm = null;
+  hintBtn.classList.remove("armed");
+  hintBtn.textContent = HINT_LABEL;
+  hintBtn.disabled = false;
+  hintBtn.hidden = false;
+}
+function takeHint(){
+  clearTimeout(hintArm); hintArm = null;
+  hinted = true;
+  hintBtn.hidden = true;
+  say(guess ? "Pin dropped. Move it or lock it in." : "Tap the map to drop your pin.");
+  /* remembered at once, so a reload between buying and locking cannot hand
+     the seat back for free. A record from another day is started over first,
+     or its old rounds would be restored as today's. */
+  if(record.day !== iso){
+    record.n = 0; record.scores = []; record.exacts = [];
+    record.dists = []; record.strays = []; record.hints = [];
+  }
+  record.day = iso; record.five = puzzle; record.hintOn = round;
+  writeRecord(record);
+}
+hintBtn.onclick = ()=>{
+  if(hinted || revealing || done) return;
+  if(!hintBtn.classList.contains("armed")){
+    hintBtn.classList.add("armed");
+    hintBtn.textContent = "Sure? Half points";
+    hintArm = setTimeout(resetHint, 4000);
+    return;
+  }
+  takeHint();
+};
+
 function lockIn(){
   const name = puzzle[round];
   const c = CO[name];
@@ -1221,16 +1313,20 @@ function lockIn(){
            : milesBetween(svgToLonLat(guess.x, guess.y), [c.lon, c.lat]);
   /* outside Kentucky is worth nothing, however near the line it landed —
      the game asks for a county, and out there you did not name one */
-  const s = guess.county ? scoreFor(mi, exact) : 0;
+  const full = guess.county ? scoreFor(mi, exact) : 0;
+  /* half, rounded down: a hinted round can never reach the 50 an unaided
+     miss of about sixty miles is worth, let alone a dead-on hundred */
+  const s = hinted ? Math.floor(full / 2) : full;
   scores[round] = s;
   exacts[round] = exact;
   dists[round] = mi;
   strays[round] = !guess.county;
+  hints[round] = hinted;
   /* written per round, not per run: a tab that goes away between rounds
      should cost the round it was on, not the four before it */
   record.day = iso; record.n = round + 1; record.five = puzzle;
   record.scores = scores; record.exacts = exacts;
-  record.dists = dists; record.strays = strays;
+  record.dists = dists; record.strays = strays; record.hints = hints;
   writeRecord(record);
   /* the round is settled: panning and zooming stay live so the reveal can be
      studied, but the map stops accepting pins */
@@ -1245,12 +1341,15 @@ function lockIn(){
   /* a dead-on guess has nowhere to fly, so it lands at once */
   revealAnswer(guess, c, !exact, ()=>{
     if(target) target.classList.add("hit");
-    showReveal(name, s, v);
+    showReveal(name, s, v, hinted);
   });
   drawTape();
   /* Lock it in has done its job; advancing now belongs to the card, so the
-     button below the map stops changing identity mid-round. */
+     button below the map stops changing identity mid-round. The hint goes
+     too: the card covers it, but it should not be reachable from a keyboard. */
   lockBtn.disabled = true;
+  clearTimeout(hintArm); hintArm = null;
+  hintBtn.hidden = true;
   nextBtn.textContent = round<4 ? "Next county" : "See your score";
   nextBtn.onclick = advance;
   /* The last round carries itself into the results. Rounds one to four wait
@@ -1505,13 +1604,14 @@ function finish(silent){
   }
   record.day = iso; record.n = 5; record.five = puzzle;
   record.scores = scores; record.exacts = exacts;
-  record.dists = dists; record.strays = strays;
+  record.dists = dists; record.strays = strays; record.hints = hints;
   writeRecord(record);
   document.getElementById("step").textContent = "Done";
   const target = document.getElementById("target");
   target.classList.add("ending");
   target.textContent = endingFor(total);
   lockBtn.style.display = "none";
+  hintBtn.hidden = true;
   readout.innerHTML = "";
   hideReveal();
   /* the run is over, so no round is in play: all five sit at the same weight,
@@ -1523,7 +1623,9 @@ function finish(silent){
   link.setAttribute("opacity","0");
   drawTape();
 
-  const share = `countyashell.com ${iso}\n` + scores.map(s=>`${s}${emoji(s)}`).join(" ") + `\nFinal score: ${total}`;
+  /* a hinted round shows a bulb where the others show how they went, so the
+     score a friend sees says which rounds had help */
+  const share = `countyashell.com ${iso}\n` + scores.map((s,i)=>`${s}${hints[i] ? "\u{1F4A1}" : emoji(s)}`).join(" ") + `\nFinal score: ${total}`;
   /* the big score below says the run is over; the line above it only needs
      to say which day it was */
   document.getElementById("resStep").textContent = iso;
@@ -1559,8 +1661,9 @@ function finish(silent){
     const miles = document.createElement("p");
     miles.className = "rmiles";
     const md = milesLabel(dists[i]);
-    miles.textContent = exacts[i] ? "Dead on."
-      : `${md} ${md === "1" ? "mile" : "miles"} off` + (strays[i] ? ", outside Kentucky" : "");
+    miles.textContent = (exacts[i] ? "Dead on"
+      : `${md} ${md === "1" ? "mile" : "miles"} off` + (strays[i] ? ", outside Kentucky" : ""))
+      + (hints[i] ? ", with a hint." : ".");
     const fact = document.createElement("p");
     fact.className = "rfact";
     fact.textContent = FACTS[name] || "";
@@ -1579,13 +1682,17 @@ function finish(silent){
    nothing to share — and a tab that reloads itself, which iOS does to
    anything left in the background, should not quietly wipe an afternoon.
    Mid-run, it picks up at the round it was on. */
+/* Today's record, and scored against today's five: one from a build that drew
+   differently must not be laid over these counties. */
+function recordIsToday(){
+  return !!record && record.day === iso && Array.isArray(record.five)
+    && record.five.join("|") === puzzle.join("|");
+}
 function restore(){
-  if(!record || record.day !== iso || !record.n) return false;
-  /* the rounds were scored against a particular five; a record from a build
-     that drew differently must not be laid over today's counties */
-  if(!Array.isArray(record.five) || record.five.join("|") !== puzzle.join("|")) return false;
+  if(!recordIsToday() || !record.n) return false;
   scores = record.scores || []; exacts = record.exacts || [];
   dists = record.dists || [];  strays = record.strays || [];
+  hints = record.hints || [];
   if(scores.length < record.n) return false;          // half-written: start over
   played.push(...puzzle.slice(0, record.n));
   if(record.n < 5){ round = record.n; startRound(); return true; }
