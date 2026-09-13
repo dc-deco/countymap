@@ -77,25 +77,83 @@ def lines(img, P, counties, w):
     for ring in rings(C['outline']):
         d.line([P(p) for p in ring] + [P(ring[0])], fill=(24, 32, 27, 255), width=w * 3)
 
-# ---- share card: the whole state, the name in the empty north-west ----
+# ---- share card: the name first, the state given room, one goldenrod county ----
+# A link preview is a poster, not a map. The county grid at this size was
+# noise, the hillshade read as an old-map filter, and the state pressed on
+# every edge. So: flat warm cream, the state at about three quarters of the
+# width with air around it, county lines held back to a third, the border
+# strong, and Madison County in the game's goldenrod with a pin on it — which
+# says "geography game" without a word of mechanics. The relief survives only
+# as a whisper inside the state. Drawn at 2x and downsampled, since PIL's
+# lines and polygons are not antialiased on their own.
+from PIL import ImageOps
 x0, y0, x1, y1 = ky_bbox()
 W, H = 1200, 630
-img, P = crop(SW, SW * H / W, W, H)      # as wide as the frame goes
-lines(img, P, True, 2)
-# A bar across the bottom would have cut the southern counties off: at this
-# width the state is 509px tall in a 630px card, so the type goes where the
-# map has nothing — over the pale country north-west of the line.
-scrim = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-ImageDraw.Draw(scrim).rectangle([0, 0, 640, 210], fill=PAPER + (150,))
-img = Image.alpha_composite(img, scrim.filter(__import__('PIL.ImageFilter', fromlist=['x']).GaussianBlur(38)))
-d = ImageDraw.Draw(img)
-d.text((56, 44), 'County As Hell', font=ttf(700, 72), fill=(24, 32, 27))
-d.text((59, 128), 'A Kentucky map game', font=ttf(400, 32), fill=(66, 78, 72))
-# JPEG, not PNG: a hillshade is a photograph as far as a compressor is
-# concerned, and PNG made 992 KB of it. Not WebP either — a link preview has
-# to render wherever it is pasted, and some of those still will not take one.
-img.convert('RGB').save(os.path.join(OUT, 'share.jpg'), quality=86,
-                        optimize=True, progressive=True)
+SS = 2
+w, h = W * SS, H * SS
+CREAM  = (245, 240, 229)
+FIELD_LO, FIELD_HI = (214, 206, 187), (236, 229, 211)   # the state's own tone, textured between these
+INK    = (27, 36, 32)
+GOLD   = (228, 169, 60)
+MADDER = (155, 59, 38)
+card = Image.new('RGBA', (w, h), CREAM + (255,))
+
+kw, kh = x1 - x0, y1 - y0
+state_w = 0.78 * w
+sc = state_w / kw
+ox = w - 56 * SS - state_w
+oy = h - 50 * SS - kh * sc
+P = lambda p: ((p[0] - x0) * sc + ox, (p[1] - y0) * sc + oy)
+
+# the state: a flat field with a whisper of relief, cut to the outline
+rel = relief.resize((round(kw * sc), round(kh * sc)), Image.LANCZOS,
+                    box=(x0 * RK, y0 * RK, x1 * RK, y1 * RK)).convert('L')
+field = ImageOps.colorize(rel, black=FIELD_LO, white=FIELD_HI).convert('RGBA')
+state_mask = Image.new('L', (w, h), 0)
+sm = ImageDraw.Draw(state_mask)
+for ring in rings(C['outline']): sm.polygon([P(p) for p in ring], fill=255)
+layer = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+layer.paste(field, (round(ox), round(oy)))
+card = Image.composite(layer, card, state_mask)
+
+# the one accent: Madison County, then its lines and pin go on top
+madison = next(c for c in C['counties'] if c['name'] == 'Madison')
+d = ImageDraw.Draw(card)
+for ring in rings(madison['d']): d.polygon([P(p) for p in ring], fill=GOLD + (255,))
+
+# county lines at a third, on their own layer so the alpha actually blends
+grid = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+gd = ImageDraw.Draw(grid)
+for c in C['counties']:
+    for ring in rings(c['d']):
+        gd.line([P(p) for p in ring] + [P(ring[0])], fill=INK + (88,), width=3)
+card = Image.alpha_composite(card, grid)
+d = ImageDraw.Draw(card)
+for ring in rings(C['outline']):
+    d.line([P(p) for p in ring] + [P(ring[0])], fill=INK + (255,), width=9, joint='curve')
+
+# a small pin on Madison: white halo, madder disc, a pinhole of white
+px, py = P((madison['x'], madison['y']))
+def disc(r, fill): d.ellipse([px - r, py - r, px + r, py + r], fill=fill)
+disc(15 * SS / 2 + 4, (255, 255, 255, 255))
+disc(15 * SS / 2, MADDER + (255,))
+disc(3 * SS, (255, 255, 255, 255))
+
+# the brand, in the empty country north-west of the river
+def tracked(xy, text, font, fill, track):
+    x, y = xy
+    for ch in text:
+        d.text((x, y), ch, font=font, fill=fill)
+        x += d.textlength(ch, font=font) + track
+head = ttf(700, 62 * SS)
+tracked((56 * SS, 56 * SS), 'COUNTY AS HELL', head, INK, 0.07 * 62 * SS)
+d.text((58 * SS, 134 * SS), 'How well do you know Kentucky?', font=ttf(400, 31 * SS), fill=(76, 86, 80))
+
+# JPEG, not PNG: even flat, the relief whisper and the antialiasing compress
+# far better as a photograph. Not WebP either — a link preview has to render
+# wherever it is pasted, and some of those still will not take one.
+card.resize((W, H), Image.LANCZOS).convert('RGB').save(
+    os.path.join(OUT, 'share.jpg'), quality=88, optimize=True, progressive=True)
 
 # ---- home screen icon: the state, tight, on paper ----
 S = 180
