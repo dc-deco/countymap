@@ -157,13 +157,16 @@ county paths the game draws, so a pasted link looks like the thing it opens:
 python3 tools/social.py     # -> share.jpg, apple-touch-icon.png in the repo root
 ```
 
-`share.jpg` is 1200x630 with the wordmark set over the empty country north-west
-of the state — a bar across the bottom cut the southern counties off, because
-at that width Kentucky is 509px tall in a 630px card. JPEG rather than PNG (a
-hillshade is a photograph to a compressor: 992 KB became 168 KB) and rather
-than WebP (a preview has to render wherever it is pasted). Re-run it after any
-change to the relief or the crop. The favicon needs no file — `build.js` draws
-it from the state outline and inlines it as an SVG data URI.
+`share.jpg` is 1200x630 and is a poster rather than a map: flat warm cream,
+the state at about three quarters of the width with air around it, county
+lines held back to a third, the border strong, Madison County in the game's
+goldenrod with a pin on it, and the wordmark in the empty country north-west
+of the river. The relief survives only as a whisper inside the state. It is
+drawn at 2x and downsampled, since PIL does not antialias lines on its own.
+JPEG rather than PNG (smaller even flat) and rather than WebP (a preview has
+to render wherever it is pasted). Re-run it after any change to the outline.
+The favicon needs no file — `build.js` draws it from the state outline and
+inlines it as an SVG data URI.
 
 ## The daily five
 
