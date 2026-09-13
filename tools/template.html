@@ -441,6 +441,12 @@ dialog.pop #copy{width:100%}
 .tally{font-size:11px;letter-spacing:.11em;text-transform:uppercase;
   color:var(--ink-2);margin:6px 0 0}
 .tally[hidden]{display:none}
+/* the clock to tomorrow's five, in the same voice, under the share button */
+.next{font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-2);margin:12px 0 0;text-align:center;min-height:15px}
+.next b{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.next button{font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--ink);
+  background:none;border:0;box-shadow:none;padding:0;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .recap{list-style:none;margin:26px 0 0;padding:0}
 .recap li{padding:0;margin-top:24px}
 .recap li:first-child{margin-top:0}
@@ -580,6 +586,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <p class="tally" id="resTally"></p>
   <pre id="share"></pre>
   <button id="copy" class="primary">Share your score</button>
+  <p class="next" id="resNext" aria-live="off"></p>
   <ol class="recap" id="recap"></ol>
   </div>
   <div class="more" aria-hidden="true"></div>
@@ -722,6 +729,23 @@ function zoneIso(d){
   }catch(e){ return localIso(d); }
 }
 const iso = zoneIso(today);
+/* Seconds left in the game day, read off the Eastern wall clock rather than
+   computed from an offset, so it needs no knowledge of when the clocks
+   change. On the two nights a year they do, the figure is an hour out until
+   the change happens and then corrects itself, which nobody watching a
+   countdown at 1am will hold against it. */
+function secondsLeftInDay(d){
+  try{
+    const p = new Intl.DateTimeFormat("en-US", {timeZone:DAY_ZONE, hourCycle:"h23",
+      hour:"2-digit", minute:"2-digit", second:"2-digit"}).formatToParts(d);
+    const v = t => +p.find(x => x.type === t).value;
+    return 86400 - (v("hour") * 3600 + v("minute") * 60 + v("second"));
+  }catch(e){ return 86400 - (d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds()); }
+}
+function clockLeft(secs){
+  const pad = n => String(n).padStart(2, "0");
+  return `${Math.floor(secs / 3600)}:${pad(Math.floor(secs % 3600 / 60))}:${pad(secs % 60)}`;
+}
 /* the label has to read off the same clock, or someone playing late in the
    west sees yesterday's date over today's counties. Short month: "September
    11" ate a surprising amount of a phone's width for something nobody reads
@@ -1811,6 +1835,8 @@ function finish(silent){
   document.getElementById("share").textContent = share;
   wireShare(share);
 
+  startCountdown();
+
   const tally = document.getElementById("resTally");
   tally.hidden = !canStore || !record.runs;
   /* one in a row is not a streak, so it goes unsaid */
@@ -1849,6 +1875,35 @@ function finish(silent){
   document.getElementById("reopen").onclick = openResults;
   if(!silent) openResults();
 }
+
+/* The clock to tomorrow's five, ticking under the share button on the results
+   sheet: the one thing on the card that says when to come back. It runs off
+   the same Eastern day the puzzle does. When that day turns while the sheet
+   is still open the clock gives way to a line that reloads the page, since
+   the five were drawn when the page loaded and a new day needs a new draw. */
+let nextTimer = null;
+function startCountdown(){
+  const el = document.getElementById("resNext");
+  const tick = () => {
+    if(zoneIso(new Date()) !== iso){
+      clearInterval(nextTimer); nextTimer = null;
+      const b = document.createElement("button");
+      b.textContent = "A new five is up. Play it.";
+      b.onclick = () => location.reload();
+      el.replaceChildren(b);
+      return;
+    }
+    const clock = document.createElement("b");
+    clock.textContent = clockLeft(secondsLeftInDay(new Date()));
+    el.replaceChildren("Tomorrow\u2019s five in ", clock);
+  };
+  tick();
+  clearInterval(nextTimer);
+  nextTimer = setInterval(tick, 1000);
+}
+/* a tab brought back from the background catches up at once rather than on
+   the next throttled tick */
+document.addEventListener("visibilitychange", () => { if(!document.hidden && nextTimer) startCountdown(); });
 
 /* A day already played is not played again. The five counties are the same
    for everybody, so a run you can retake until it is perfect is a score worth
