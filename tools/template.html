@@ -1516,11 +1516,10 @@ function wirePop(d, closer, tapOutside){
   /* Esc closes a dialog itself, instantly; take it over so it leaves like
      everything else does */
   d.addEventListener("cancel", e=>{ e.preventDefault(); closePop(d); });
-  /* Tapping beside the sheet closes the welcome, where getting out of the way
-     is the whole point. The results do not take it: that sheet is the end of
-     the run and the only place the share button lives, and a stray tap while
-     reading down the five counties should not throw it away. The X is right
-     there, and it cannot be pressed by accident. */
+  /* Tapping beside the sheet closes it. Both sheets take it: getting out of
+     the way is the whole point of the welcome, and the results come back with
+     one press of See your score, so a stray tap there costs a tap and nothing
+     else. */
   if(!tapOutside) return;
   /* A click on the backdrop reports the dialog as its target — but so does a
      click on the dialog's own padding, so compare against the box instead. */
@@ -1534,7 +1533,7 @@ function wirePop(d, closer, tapOutside){
 }
 
 const dlg = document.getElementById("results");
-wirePop(dlg, document.getElementById("resClose"));
+wirePop(dlg, document.getElementById("resClose"), true);
 markMore(dlg);
 const openResults = ()=>openPop(dlg);
 
