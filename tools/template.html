@@ -34,7 +34,9 @@ __FONT_CSS__
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 __BACKDROP_CSS__
-html,body{margin:0;padding:0;touch-action:pan-y}
+/* overscroll contained, or a drag down from the top of the page on Android
+   reloads it — mid-round that costs the pin and any hint already bought */
+html,body{margin:0;padding:0;touch-action:pan-y;overscroll-behavior-y:contain}
 html{background:var(--paper)}
 body{
   background:transparent; color:var(--ink);
@@ -91,6 +93,9 @@ h1{font-size:15px;font-weight:700;letter-spacing:.05em;margin:0}
 /* paper, which is what the bleed above is mixed into — and what backs the map
    before the relief decodes */
 .mapbox{position:relative;background:var(--paper);border:1px solid #46524B;overflow:hidden;touch-action:none;
+  /* a finger held on the map — grabbing the pin, or just thinking — must not
+     raise a callout or select the picture */
+  -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
   display:flex;align-items:center;justify-content:center;
   /* The frame carries terrain well past Kentucky, and on a short screen that
      margin is the first thing that can go. Capping the box clips the frame
@@ -179,11 +184,12 @@ dialog.pop:focus,dialog.pop:focus-visible{outline:none}
 /* Top-left, which is the one corner of the default view that holds no
    Kentucky at any of the widths the page renders at — the old on-map buttons
    sat bottom-right and swallowed taps on Pike. Verified clear at 360-600px. */
-.mapzoom{position:absolute;top:10px;left:10px;z-index:2;display:flex;flex-direction:column;gap:6px}
+.mapzoom{position:absolute;top:10px;left:10px;z-index:2;display:flex;flex-direction:column;gap:8px}
+/* 44px: the smallest target either platform's guidelines call comfortable */
 .mapzoom button{
-  width:34px;height:34px;padding:0;border-radius:50%;
+  width:44px;height:44px;padding:0;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  font-size:19px;line-height:1;font-weight:700;
+  font-size:22px;line-height:1;font-weight:700;
   background:rgba(244,246,244,.93);border:1px solid var(--line-2);
   box-shadow:0 1px 4px rgba(20,28,24,.24);
 }
@@ -410,6 +416,9 @@ html.intro body::before{opacity:1}
   dialog.pop.leaving{opacity:0;translate:0 10px;scale:.978}
   dialog.pop.leaving::backdrop{opacity:0}
   dialog.pop.entering{opacity:0;translate:0 8px;scale:.984}
+  /* while a finger is pulling the sheet down it follows the finger, not the
+     easing; the easing takes over again when the finger lets go */
+  dialog.pop.pulling{transition:opacity .32s ease}
 }
 dialog.pop .x{
   position:absolute;top:10px;right:10px;z-index:2;width:36px;height:36px;padding:0;
@@ -637,6 +646,10 @@ function dayBefore(d){
    first. They are never drawn — they exist so a tap that misses Kentucky can
    still be told where it landed. See tools/states.js. */
 const STATES = __STATES__;
+/* A short tick where the hardware has one. Android does; iOS Safari does not
+   and simply ignores it. Never anything the game depends on. */
+function buzz(pattern){ try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){} }
+
 /* Kentucky by geometry rather than by hit testing. elementFromPoint answers
    nearly always, but a tap landing exactly on a shared county edge can come
    back with nothing, and since a pin outside Kentucky now scores zero, a
@@ -921,6 +934,38 @@ function settleView(){
   };
   drift = requestAnimationFrame(step);
 }
+/* Glide the view to another, through the same clamp every frame. Shares the
+   drift handle, so a hand on the map stops it where it is. */
+function glideTo(to, dur){
+  stopDrift();
+  if(reduceMotion.matches || !(dur > 0)){ setView({...to}); return; }
+  const from = {x:view.x, y:view.y, w:view.w}, t0 = performance.now();
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur), e = easeOut(t);
+    setView({x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e,
+             w: from.w + (to.w - from.w) * e});
+    if(t < 1){ drift = requestAnimationFrame(step); return; }
+    drift = null;
+    setView({...to});
+  };
+  drift = requestAnimationFrame(step);
+}
+/* The view that holds every point given, with air around them, never tighter
+   than minW so a dead-on still shows the neighbours, and never past the edges. */
+function frameAround(pts, minW){
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for(const [x, y] of pts){
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x);
+    y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+  }
+  const ar = FULL.h / FULL.w;
+  let w = Math.max((x1 - x0) * 1.6, (y1 - y0) * 1.6 / ar, minW);
+  w = Math.min(FULL.w, Math.max(FULL.w / MAX_ZOOM, w));
+  const h = w * ar, b = bounds(w, h);
+  return {x: Math.min(b.x1, Math.max(b.x0, (x0 + x1) / 2 - w / 2)),
+          y: Math.min(b.y1, Math.max(b.y0, (y0 + y1) / 2 - h / 2)), w, h};
+}
+
 /* zoom by f, holding the svg point at viewport fraction (fx,fy) still.
    width is clamped up front so a zoom past the limit is a no-op instead of
    sliding the view (setView would otherwise clamp w after x was derived). */
@@ -950,11 +995,26 @@ svg.addEventListener("wheel", e=>{
 }, {passive:false});
 
 let ptrs = new Map(), start = null, moved = false, pinch = null;
+/* The pin can be picked up and dragged, as well as re-placed by a tap. Whether
+   a touch is on the pin is decided in screen pixels, since the pin is drawn
+   in map units and is a speck when zoomed out; the grab zone is a fingertip
+   whatever the zoom. Only before the round is locked. */
+let dragPin = false;
+function nearPin(cx, cy){
+  if(!guess || revealing || done) return false;
+  const m = svg.getScreenCTM();
+  return Math.hypot(cx - (guess.x * m.a + m.e), cy - (guess.y * m.d + m.f)) <= 26;
+}
 svg.addEventListener("pointerdown", e=>{
   svg.setPointerCapture(e.pointerId);
   ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(ptrs.size===1){ start={x:e.clientX,y:e.clientY,view:{...view}}; moved=false; }
+  if(ptrs.size===1){
+    start={x:e.clientX,y:e.clientY,view:{...view}}; moved=false;
+    dragPin = nearPin(e.clientX, e.clientY);
+    if(dragPin){ moved=true; stopBeat(); }
+  }
   if(ptrs.size===2){
+    dragPin = false;   /* a second finger means a pinch, and the pin stays put */
     const [a,b]=[...ptrs.values()];
     const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
     const p=toSvg(mx,my);
@@ -965,6 +1025,12 @@ svg.addEventListener("pointerdown", e=>{
 svg.addEventListener("pointermove", e=>{
   if(!ptrs.has(e.pointerId)) return;
   ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(dragPin && ptrs.size===1){
+    const p = toSvg(e.clientX, e.clientY);
+    guess.x = p.x; guess.y = p.y;
+    gPin.setAttribute("transform",`translate(${p.x} ${p.y})`);
+    return;
+  }
   if(ptrs.size===2 && pinch){
     const [a,b]=[...ptrs.values()];
     const f = Math.hypot(a.x-b.x,a.y-b.y)/pinch.d;
@@ -986,6 +1052,13 @@ function endPtr(e){
   const was = ptrs.size;
   ptrs.delete(e.pointerId);
   if(ptrs.size<2) pinch=null;
+  if(dragPin){
+    /* let go: the pin is where it was last drawn, so settle it there */
+    dragPin = false;
+    start = null;
+    placePin(guess.x, guess.y, null);
+    return;
+  }
   if(ptrs.size>=1){
     /* a finger is still down: re-seed the pan origin so it does not jump */
     const p=[...ptrs.values()][0];
@@ -1000,17 +1073,22 @@ function endPtr(e){
   if(!tap) return;
   const p = toSvg(e.clientX,e.clientY);
   const el = document.elementFromPoint(e.clientX,e.clientY);
-  const hit = (el && el.tagName==="path") ? el.dataset.n : null;
-  const county = hit || countyAt(p.x, p.y);
+  const hit = (el && el.parentNode && el.parentNode.id==="counties") ? el.dataset.n : null;
   /* the day is done: a tap asks about a county instead of placing a pin.
      Mid-run the map only takes pins, and only before the round is locked. */
-  if(done){ if(county) peek(county); return; }
+  if(done){ const c = hit || countyAt(p.x, p.y); if(c) peek(c); return; }
   if(revealing) return;
+  placePin(p.x, p.y, hit);
+}
+/* The pin comes to rest here, by tap or by drag. `hit` is the county the hit
+   test already found, if any; the geometry answers otherwise. */
+function placePin(x, y, hit){
+  const county = hit || countyAt(x, y);
   /* only worth asking when the pin missed Kentucky, which is the only time
      the reveal has anything to say about it */
-  guess = {x:p.x, y:p.y, county, state: county ? null : stateAt(p.x, p.y)};
+  guess = {x, y, county, state: county ? null : stateAt(x, y)};
   stopBeat();
-  gPin.setAttribute("transform",`translate(${p.x} ${p.y})`);
+  gPin.setAttribute("transform",`translate(${x} ${y})`);
   gPin.setAttribute("opacity","1");
   lockBtn.disabled = false;
   say("Pin dropped. Move it or lock it in.");
@@ -1237,7 +1315,9 @@ function startRound(){
   /* a hint bought for this round before a reload was still bought */
   if(recordIsToday() && record.hintOn === round) takeHint();
   hideReveal();
-  setView({...FULL});
+  /* the round before ended zoomed in on its answer; the next opens back out,
+     gliding rather than cutting, unless this is the opening of the day */
+  if(round > 0 && view.w < FULL.w - 0.5) glideTo({...FULL}, 480); else setView({...FULL});
   drawTape();
 }
 
@@ -1381,6 +1461,16 @@ function lockIn(){
 
   readout.innerHTML = "";
   const v = verdict(mi, exact, name, guess.county, guess.state);
+  buzz(exact ? [14, 70, 32] : 12);
+  /* The view closes in on the pin and the answer together, with the whole of
+     the answer's county in frame, while the line flies between them. On a
+     phone the map is a hand wide, and a forty-mile miss left at full zoom is
+     a fingernail; framed, it is a distance you can read. A hand on the map
+     stops the glide where it is. */
+  const bb = target ? target.getBBox() : null;
+  const pts = [[guess.x, guess.y], [c.x, c.y]];
+  if(bb) pts.push([bb.x, bb.y], [bb.x + bb.width, bb.y + bb.height]);
+  glideTo(frameAround(pts, FULL.w / 4.5), 650);
   /* a dead-on guess has nowhere to fly, so it lands at once */
   revealAnswer(guess, c, !exact, ()=>{
     if(target) target.classList.add("hit");
@@ -1492,6 +1582,7 @@ function openPop(d){
 }
 function shutPop(d){
   d.classList.remove("leaving");
+  d.style.translate = "";
   d._leaving = false;
   if(typeof d.close === "function") d.close();
   else { d.removeAttribute("open"); d.dispatchEvent(new Event("close")); }
@@ -1508,8 +1599,45 @@ function closePop(d){
   d.classList.add("leaving");
   setTimeout(()=>shutPop(d), LEAVE_MS);
 }
+/* A sheet can be pulled down and let go of. It follows the finger once the
+   pull has started from the top of the sheet's own scroll, so reading down
+   and pulling down stay two different gestures, and the sheet only goes if
+   it has come far enough — otherwise it eases back. Touch events, not
+   pointer events: the sheet scrolls, and a scrolling element hands a pointer
+   over to the scroller mid-gesture, whereas a touchmove can be declined. */
+function wireSwipe(d){
+  const sheet = d.querySelector(".sheet");
+  if(!sheet) return;
+  let y0 = null, dy = 0, pulling = false;
+  const settle = () => {
+    d.classList.remove("pulling");
+    if(!pulling){ y0 = null; return; }
+    pulling = false; y0 = null;
+    if(dy > 90){ closePop(d); return; }    /* keeps its translate until shut */
+    d.style.translate = "";
+  };
+  d.addEventListener("touchstart", e => {
+    if(e.touches.length !== 1 || d._leaving){ y0 = null; return; }
+    y0 = e.touches[0].clientY; dy = 0; pulling = false;
+  }, {passive:true});
+  d.addEventListener("touchmove", e => {
+    if(y0 === null || e.touches.length !== 1) return;
+    dy = e.touches[0].clientY - y0;
+    if(!pulling){
+      if(dy > 8 && sheet.scrollTop <= 0){ pulling = true; d.classList.add("pulling"); }
+      else if(dy < -8 || sheet.scrollTop > 0){ y0 = null; }
+      return;
+    }
+    if(!e.cancelable) return;
+    e.preventDefault();
+    d.style.translate = `0 ${Math.max(0, dy) * 0.85}px`;
+  }, {passive:false});
+  d.addEventListener("touchend", settle);
+  d.addEventListener("touchcancel", settle);
+}
 function wirePop(d, closer, tapOutside){
   if(closer) closer.onclick = ()=>closePop(d);
+  wireSwipe(d);
   /* Esc and backdrop dismissal go through the dialog's own close event, so the
      scroll lock is released no matter how the sheet was dismissed. */
   d.addEventListener("close", releaseLock);
@@ -1661,6 +1789,8 @@ function finish(silent){
   stopFlight();
   clearPeek();
   paintPlayed();
+  /* back out to the whole state, which is the day's map you are left with */
+  if(view.w < FULL.w - 0.5) glideTo({...FULL}, 600);
   gPin.setAttribute("opacity","0");
   gTruth.setAttribute("opacity","0");
   link.setAttribute("opacity","0");
