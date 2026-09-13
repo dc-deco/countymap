@@ -458,6 +458,10 @@ dialog.pop #copy{width:100%}
 .next b{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
 .next button{font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--ink);
   background:none;border:0;box-shadow:none;padding:0;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+/* the tip jar: an aside under the clock, in sentence case so it reads as a
+   remark rather than a label, with the link the only thing that stands up */
+.tip{font-size:13px;line-height:1.45;color:var(--ink-2);margin:14px 0 0;text-align:center}
+.tip a{color:var(--ink);font-weight:700;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
 .recap{list-style:none;margin:26px 0 0;padding:0}
 .recap li{padding:0;margin-top:24px}
 .recap li:first-child{margin-top:0}
@@ -705,7 +709,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <p class="body">Come back tomorrow for 5 more. Lord knows we&#39;ve got enough of &#39;em.</p>
   <button id="welGo" class="primary">Let&#39;s go</button>
   <p class="credits">Relief: USGS &amp; SRTM via Mapzen Terrain Tiles &middot; Boundaries: US Census &middot;
-  Water and urban areas: Natural Earth</p>
+  Water and urban areas: Natural Earth &middot; Tip jar: <a href="https://venmo.com/u/decoste" target="_blank" rel="noopener noreferrer">@decoste on Venmo</a></p>
   </div>
   <div class="more" aria-hidden="true"></div>
 </dialog>
@@ -720,6 +724,8 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <pre id="share"></pre>
   <button id="copy" class="primary">Share your score</button>
   <p class="next" id="resNext" aria-live="off"></p>
+  <p class="tip">Lord knows these fees don&#39;t pay themselves.<br>
+  <a href="https://venmo.com/u/decoste" target="_blank" rel="noopener noreferrer">Toss a little in the jar</a>.</p>
   <ol class="recap" id="recap"></ol>
   </div>
   <div class="more" aria-hidden="true"></div>
