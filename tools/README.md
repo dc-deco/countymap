@@ -1,9 +1,10 @@
 # Map pipeline
 
 `index.html` is a single self-contained file: the shaded-relief basemap is an
-inlined WebP data URI and every vector layer is inlined SVG. Nothing is fetched
-at play time. These scripts are what generated that data, kept so the map can be
-rebuilt or re-tuned rather than being a black box.
+inlined WebP data URI and every vector layer is inlined SVG. Nothing the game
+needs is fetched at play time; the only request the page makes is the Vercel
+analytics script in the template's head. These scripts are what generated that
+data, kept so the map can be rebuilt or re-tuned rather than being a black box.
 
 ## Rebuilding just the page
 
@@ -56,14 +57,15 @@ itself lives in `tools/template.html`.
 Kentucky can be told which state it landed in. These are never drawn — they
 exist only for a ray cast — so `tools/states.js` cuts them down hard: clipped
 to the map frame, simplified to 0.2 map units (about 90 m), and stored as flat
-coordinate arrays rather than SVG paths. Nine states fall inside the frame,
-653 points, 8 KB. Regenerate after any change to `frame.json` or the SVG size:
+coordinate arrays rather than SVG paths. Thirteen states fall inside the
+frame, 757 points, about 12 KB. Regenerate after any change to `frame.json` or
+the SVG size:
 
 ```sh
 node tools/states.js
 ```
 
-Thirteen states fall inside the current frame. Each one the reveal can name
+Each state in the frame that the reveal can name
 needs a line in `STATE_HEADS` in the template, or it falls back to naming
 itself.
 
@@ -117,6 +119,8 @@ Run from a scratch directory; each step writes into it.
 | 2 | `curl -K dem/urls.txt --parallel` | 650 Terrarium elevation tiles (z10, ~30 MB) |
 | 3 | `mosaic.py` | `elev.npy` — stitched, despeckled elevation grid |
 | 4 | `relief.py` | `relief_*.webp` + `frame.json` — hillshade & tint |
+| 5 | `geom.js` | `counties.json` — projected county paths, interior points, lon/lat |
+| 6 | `water.js` | `water.json` — rivers, lakes, urban areas |
 
 The crop in `relief.py` (`CW,CE,CS,CN`) sets the frame's aspect ratio, and
 that ratio is what fixes the map's height on the page: the element is as wide
@@ -135,8 +139,6 @@ The DEM bbox in `tiles.py` has to cover the crop with room to spare; it
 currently runs 34.45-41.10N, two tile rows past each edge. Changing the crop
 means re-running steps 5-6 and `states.js` as well, and regenerating the
 border-distance reference with `refcases.py`, which stores map coordinates.
-| 5 | `geom.js` | `counties.json` — projected county paths, interior points, lon/lat |
-| 6 | `water.js` | `water.json` — rivers, lakes, urban areas |
 
 ## Link previews
 
@@ -159,30 +161,30 @@ it from the state outline and inlines it as an SVG data URI.
 
 ## The daily five
 
-`EASY`, `MID` and `HARD` in the template are the draw. A day takes one county
-from EASY, one from EASY+MID, one from MID, one from MID+HARD and one from
-HARD, rejecting any it has already taken, seeded off the date — so everyone
-gets the same five and the same order.
+`drawFive` in the template is the draw: the 120 county names in sorted
+order, shuffled off a seed hashed from the date, first five taken. Everyone
+gets the same five in the same order, and a county cannot come up twice in a
+day. Every county is as likely as every other. There used to be three
+difficulty tiers weighting the draw, with the later rounds counting double and
+triple towards a total of 1000, but on the map one county proved about as hard
+to find as the next, so the weighting measured nothing; the total is now a
+plain sum out of 500.
 
-Between them the three tiers must name all 120 counties, exactly once each;
-`build.js` fails if any county is in none of them or in two. That check exists
-because 33 counties sat in no tier for a while, which nothing could catch from
-the outside: the game ran perfectly and simply never mentioned them.
+The function is written on one line because `daycheck.js` and `rotation.js`
+lift it out of the built page by regex, along with the seed and the PRNG, so
+both scripts measure exactly what ships.
 
 The day itself is Eastern, not the player's own clock — the zone Louisville,
 Lexington and Frankfort keep. It used to be local, which meant that between
 midnight in the east and midnight in the west, half the country was on
 tomorrow's counties: Kentucky straddles two zones, so the state split for an
 hour every night, and a shared score could name a puzzle a friend had not been
-given yet. `node tools/daycheck.js` sets seven devices in seven zones to one
+given yet. `node tools/daycheck.js` sets eleven devices in eleven zones to one
 instant and asserts they all draw the same five.
 
 `node tools/rotation.js [days]` replays the shipped generator over consecutive
 dates and reports how often each county comes round and when the five first
-repeat. It measures the build rather than an idealised model, which matters:
-the tiers cut the space from the 190,578,024 sets a flat draw would give to
-about 55 million, and make an EASY county three times likelier on a given day
-than a HARD one.
+repeat. It measures the build rather than an idealised model.
 
 `facts.json` is hand-maintained, not generated — it is not part of this
 pipeline and survives a full map rebuild.

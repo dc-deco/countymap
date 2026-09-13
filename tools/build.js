@@ -108,6 +108,11 @@ const counties = C.counties.map(c => `<path d="${c.d}" data-n="${c.name}"/>`).jo
 const CO = {};
 for (const c of C.counties) CO[c.name] = { x:c.x, y:c.y, lon:c.lon, lat:c.lat };
 const NAMES = C.counties.map(c => c.name);
+/* Everything inlined into the page's <script> goes through this rather than
+   JSON.stringify directly: stringify leaves "<" alone, so a fact that ever
+   contained "</script>" would end the script block and take the page down.
+   The escaped form is the same JSON and parses to the same string. */
+const inline = v => JSON.stringify(v).replace(/</g, '\\u003c');
 
 /* rivers grouped by stroke width so the DOM stays small */
 const byW = new Map();
@@ -131,11 +136,11 @@ const subs = {
   __RIVERS__: rivers,
   __LAKES__: lakes,
   __URBAN__: urban,
-  __NAMES__: JSON.stringify(NAMES),
-  __CENT__: JSON.stringify(CO),
-  __FRAME__: JSON.stringify(FRAME),
-  __FACTS__: JSON.stringify(FACTS),
-  __STATES__: JSON.stringify(STATES),
+  __NAMES__: inline(NAMES),
+  __CENT__: inline(CO),
+  __FRAME__: inline(FRAME),
+  __FACTS__: inline(FACTS),
+  __STATES__: inline(STATES),
   __BACKDROP_CSS__: backdropCss,
   __FONT_CSS__: fontCss,
   __WELCOME_IMG__: welcomeImg,
@@ -143,22 +148,6 @@ const subs = {
   __SHIELD_FILL__: shield('shield-fill.webp'),
   __SHIELD_INK__: shield('shield-ink.webp'),
 };
-
-/* Every county must sit in exactly one difficulty tier, or it can never be
-   asked. Thirty-three of them were in none for a while, which no test could
-   see: the game ran fine and simply never mentioned them. */
-const tier = n => {
-  const m = html.match(new RegExp('const ' + n + ' = \\[(.*?)\\];', 's'));
-  if (!m) { console.error(`no ${n} tier in the template`); process.exit(1); }
-  return m[1].match(/"([^"]+)"/g).map(q => q.slice(1, -1));
-};
-const tiers = [...tier('EASY'), ...tier('MID'), ...tier('HARD')];
-const dupTier = tiers.filter((n, i) => tiers.indexOf(n) !== i);
-if (dupTier.length) { console.error('counties in more than one tier:', [...new Set(dupTier)]); process.exit(1); }
-const untiered = NAMES.filter(n => !tiers.includes(n));
-if (untiered.length) { console.error('counties in no tier, so never asked:', untiered); process.exit(1); }
-const ghost = tiers.filter(n => !CO[n]);
-if (ghost.length) { console.error('tier names that are not counties:', ghost); process.exit(1); }
 
 /* every county must carry a fact, or the reveal falls flat for that round */
 const noFact = NAMES.filter(n => !FACTS[n] || !String(FACTS[n]).trim());

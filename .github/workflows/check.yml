@@ -1,0 +1,25 @@
+name: check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The page build needs no packages, only Node built-ins.
+      - name: Rebuild the page from the template and data
+        run: node tools/build.js tools/data /tmp/index.html
+      - name: Committed index.html matches the build
+        run: |
+          if ! cmp -s index.html /tmp/index.html; then
+            echo "::error::index.html is out of date or was hand-edited. Run: node tools/build.js"
+            exit 1
+          fi
+      - name: Every time zone draws the same five
+        run: node tools/daycheck.js

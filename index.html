@@ -331,9 +331,6 @@ body.revealing .readout,body.revealing .tape{
 .cell.hit .shield{background:var(--grass)}
 .cell.hit .shield::after{background:var(--panel)}
 .cell.hit .num{color:#fff}
-.mult{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--line)}
-.cell.now .mult{color:var(--ink)}
-.cell.done .mult{color:var(--ink-2)}
 
 dialog.pop{
   /* a modal dialog is centred by the UA in the top layer; hand-positioning it
@@ -432,8 +429,6 @@ dialog.pop #copy{width:100%}
 .recap li:first-child{margin-top:0}
 .rname{margin:0;font-weight:700;font-size:15px;display:flex;gap:10px;align-items:baseline}
 .rscore{margin-left:auto;font-weight:700;font-size:13px;color:var(--ink);white-space:nowrap}
-/* the multiplier only shows where there is one, so a x1 round stays quiet */
-.rscore .mx{font-weight:400;color:var(--line-2);margin-left:5px}
 .rmiles{margin:2px 0 0;font-size:13px;color:var(--line-2)}
 .rfact{margin:7px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2)}
 /* full-bleed header: cancel the sheet's padding so the sign meets the edges */
@@ -779,26 +774,17 @@ function stateAt(x, y){
   }
   return null;
 }
-const MULT = [1,1,2,3,3];
-
-const EASY = ["Jefferson","Fayette","Kenton","Boone","Warren","Daviess","Hardin","Campbell",
-  "Christian","McCracken","Madison","Boyd","Pike","Laurel","Pulaski","Franklin"];
-const MID = ["Barren","Bullitt","Scott","Nelson","Oldham","Henderson","Whitley","Harlan",
-  "Bell","Floyd","Marshall","Muhlenberg","Shelby","Clark","Jessamine","Calloway","Perry",
-  "Letcher","Knox","Rowan","Montgomery","Grayson","Hopkins","Meade","Greenup","Carter",
-  "Woodford","Anderson","Logan","Clay","Boyle","Bourbon","Graves","Mercer","Taylor",
-  "Johnson","Mason","Grant","Union","Lincoln","Wayne","Breathitt","Lawrence","Ohio",
-  "Simpson"];
-const HARD = ["Robertson","Menifee","Elliott","Wolfe","Magoffin","Owsley","Lee","Nicholas",
-  "Gallatin","Bracken","Carlisle","Hickman","Livingston","Crittenden","Trimble",
-  "Cumberland","Metcalfe","Powell","Bath","Fleming","Spencer","Ballard","Hancock","Lyon",
-  "Green","Casey","Jackson","Estill","Morgan","Martin","Leslie","Knott","Todd","Edmonson",
-  "Hart","Marion","Washington","Carroll","Pendleton","Harrison","Lewis","Adair","Allen",
-  "Breckinridge","Butler","Caldwell","Clinton","Fulton","Garrard","Henry","Larue",
-  "McCreary","McLean","Monroe","Owen","Rockcastle","Russell","Trigg","Webster"];
-const have = new Set(NAMES);
-const pick = a => [...new Set(a.filter(n=>have.has(n)))];
-const TIER = [pick(EASY), pick(EASY.concat(MID)), pick(MID), pick(MID.concat(HARD)), pick(HARD)];
+/* The day's five: every county, in a fixed order, shuffled off the date's
+   seed, first five taken. Everybody gets the same five in the same order and
+   a county cannot come up twice in a day. Every county is as likely as every
+   other — there used to be difficulty tiers weighting the draw and a
+   multiplier on the later rounds, but out on the map one county proved about
+   as hard to find as the next, so the weighting measured nothing. The names
+   are sorted first so the draw does not move if counties.json is ever
+   regenerated in a different order. Kept to one line because
+   tools/daycheck.js and tools/rotation.js lift it out of the built page by
+   regex, the same as seedFor and rng below. */
+function drawFive(rand, names){const a=names.slice(),out=[];for(let i=0;i<5;i++){const j=i+Math.floor(rand()*(a.length-i));[a[i],a[j]]=[a[j],a[i]];out.push(a[i]);}return out}
 
 function seedFor(d){let h=2166136261;for(const c of d)h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0}
 function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
@@ -840,13 +826,7 @@ document.getElementById("date").textContent = (()=>{
   catch(e){ return today.toLocaleDateString(undefined,{month:"short",day:"numeric"}); }
 })();
 
-const rand = rng(seedFor(iso));
-const puzzle = [];
-for(const t of TIER){
-  let n, guard=0;
-  do{ n = t[Math.floor(rand()*t.length)]; guard++; }while(puzzle.includes(n) && guard<80);
-  puzzle.push(n);
-}
+const puzzle = drawFive(rng(seedFor(iso)), NAMES.slice().sort());
 
 /* --- Web Mercator frame shared by the relief raster and every vector layer --- */
 const FR = {"k":0.347705146,"ox":65740,"oy":98211,"world":262144};
@@ -1063,7 +1043,9 @@ function endPtr(e){
     start={x:p.x,y:p.y,view:{...view}}; moved=true;
     return;
   }
-  const tap = was===1 && !moved && !done && !revealing;
+  /* a cancelled pointer never tapped anything: the browser or the OS took the
+     touch away, and a pin the player did not put down would cost the round */
+  const tap = was===1 && !moved && !done && !revealing && e.type !== "pointercancel";
   start=null;
   settleView();
   if(!tap) return;
@@ -1248,17 +1230,13 @@ function drawTape(){
        header, and by the one marker standing forward. */
     num.textContent = played ? String(scores[i]) : "";
     shield.appendChild(num);
-    const mult = document.createElement("div");
-    mult.className = "mult";
-    mult.textContent = "\u00D7" + MULT[i];
-    cell.append(shield, mult);
+    cell.append(shield);
     /* the marker alone reads as a bare number, so spell the slot out for
        screen readers */
     cell.setAttribute("role", "listitem");
-    const worth = MULT[i] === 1 ? "counts once" : MULT[i] === 2 ? "counts double" : "counts triple";
     cell.setAttribute("aria-label", played
-      ? `Round ${i+1}: ${scores[i]} points${exacts[i] ? ", dead on" : ""}. ${worth}.`
-      : `Round ${i+1}${current ? ", current" : ""}. ${worth}.`);
+      ? `Round ${i+1}: ${scores[i]} points${exacts[i] ? ", dead on" : ""}.`
+      : `Round ${i+1}${current ? ", current" : ""}.`);
     tape.appendChild(cell);
   }
 }
@@ -1383,7 +1361,7 @@ function lockIn(){
   strays[round] = !guess.county;
   /* written per round, not per run: a tab that goes away between rounds
      should cost the round it was on, not the four before it */
-  record.day = iso; record.n = round + 1;
+  record.day = iso; record.n = round + 1; record.five = puzzle;
   record.scores = scores; record.exacts = exacts;
   record.dists = dists; record.strays = strays;
   writeRecord(record);
@@ -1426,12 +1404,13 @@ function advance(){
 
 function emoji(s){ return s>=95?"\u{1F3AF}":s>=85?"\u{1F389}":s>=70?"\u{1F525}":s>=50?"\u{1F31F}":s>=25?"\u{1F914}":"\u{1F4A5}"; }
 
-/* Sign-off for the final score, out of 1000. Highest matching floor wins,
-   so the bands stay in descending order. */
+/* Sign-off for the final score, out of 500: five rounds, a hundred each, no
+   weighting. Highest matching floor wins, so the bands stay in descending
+   order. */
 const ENDINGS = [
-  [800, "You're county as hell"],
-  [550, "You know your backroads"],
-  [200, "Not so fast, city boy"],
+  [400, "You're county as hell"],
+  [275, "You know your backroads"],
+  [100, "Not so fast, city boy"],
   [0,   "You ain't from around here"],
 ];
 function endingFor(total){
@@ -1648,7 +1627,7 @@ openPop(welcome);
 
 function finish(silent){
   done = true;
-  const total = scores.reduce((a,s,i)=>a+s*MULT[i],0);
+  const total = scores.reduce((a,s)=>a+s,0);
   /* counted once per day: reopening a finished day must not inflate anything,
      and a day that follows the last one played continues the streak rather
      than starting a new one */
@@ -1657,7 +1636,7 @@ function finish(silent){
     record.streak = record.last === dayBefore(iso) ? (record.streak || 0) + 1 : 1;
     record.last = iso;
   }
-  record.day = iso; record.n = 5;
+  record.day = iso; record.n = 5; record.five = puzzle;
   record.scores = scores; record.exacts = exacts;
   record.dists = dists; record.strays = strays;
   writeRecord(record);
@@ -1685,7 +1664,7 @@ function finish(silent){
   const big = document.getElementById("resScore");
   big.textContent = String(total);
   const of = document.createElement("span");
-  of.className = "of"; of.textContent = " / 1000";
+  of.className = "of"; of.textContent = " / 500";
   big.appendChild(of);
   document.getElementById("share").textContent = share;
   wireShare(share);
@@ -1709,12 +1688,6 @@ function finish(silent){
     const sc = document.createElement("span");
     sc.className = "rscore";
     sc.appendChild(document.createTextNode(`${scores[i]} pts`));
-    if(MULT[i] > 1){
-      const mx = document.createElement("span");
-      mx.className = "mx";
-      mx.textContent = `\u00D7${MULT[i]}`;
-      sc.appendChild(mx);
-    }
     head.appendChild(sc);
     const miles = document.createElement("p");
     miles.className = "rmiles";
@@ -1741,6 +1714,9 @@ function finish(silent){
    Mid-run, it picks up at the round it was on. */
 function restore(){
   if(!record || record.day !== iso || !record.n) return false;
+  /* the rounds were scored against a particular five; a record from a build
+     that drew differently must not be laid over today's counties */
+  if(!Array.isArray(record.five) || record.five.join("|") !== puzzle.join("|")) return false;
   scores = record.scores || []; exacts = record.exacts || [];
   dists = record.dists || [];  strays = record.strays || [];
   if(scores.length < record.n) return false;          // half-written: start over
