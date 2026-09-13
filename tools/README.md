@@ -108,6 +108,12 @@ name -> sentence map) and rebuild. The build fails if any of the 120 counties
 is missing a fact, or if a fact names a county that does not exist. Facts are
 rendered as text, never markup, so quotes and punctuation are safe.
 
+`tools/data/seats.json` is the same shape — county name to county seat — and
+feeds the hint: a round can buy the seat's name for half its points, rounded
+down. Campbell and Kenton keep two seats each, written `"A; B"`, which the
+page renders as "A and B". The build fails the same way if a county has no
+seat or a seat names no county.
+
 ## Regenerating the map data
 
 Needs network plus `npm install` in `tools/` and `pip install numpy Pillow`.

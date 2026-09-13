@@ -12,6 +12,7 @@ const frame = rd('frame.json');
 const C = rd('counties.json');
 const W = rd('water.json');
 const FACTS = rd('facts.json');
+const SEATS = rd('seats.json');
 const STATES = rd('states.json');
 const webp = fs.readFileSync(path.join(DATA, 'relief.webp'));
 
@@ -140,6 +141,7 @@ const subs = {
   __CENT__: inline(CO),
   __FRAME__: inline(FRAME),
   __FACTS__: inline(FACTS),
+  __SEATS__: inline(SEATS),
   __STATES__: inline(STATES),
   __BACKDROP_CSS__: backdropCss,
   __FONT_CSS__: fontCss,
@@ -154,6 +156,11 @@ const noFact = NAMES.filter(n => !FACTS[n] || !String(FACTS[n]).trim());
 if (noFact.length) { console.error('counties missing a fact:', noFact); process.exit(1); }
 const orphan = Object.keys(FACTS).filter(n => !CO[n]);
 if (orphan.length) { console.error('facts with no matching county:', orphan); process.exit(1); }
+/* and a seat, or the hint has nothing to sell for that round */
+const noSeat = NAMES.filter(n => !SEATS[n] || !String(SEATS[n]).trim());
+if (noSeat.length) { console.error('counties missing a seat:', noSeat); process.exit(1); }
+const seatOrphan = Object.keys(SEATS).filter(n => !CO[n]);
+if (seatOrphan.length) { console.error('seats with no matching county:', seatOrphan); process.exit(1); }
 for (const [k, v] of Object.entries(subs)) html = html.split(k).join(v);
 
 const left = html.match(/__[A-Z_]+__/g);
