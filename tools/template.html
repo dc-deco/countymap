@@ -1767,9 +1767,6 @@ welcome.onLeave = ()=>{
 };
 welcome.addEventListener("close", ()=>{
   document.documentElement.classList.remove("intro");
-  /* Coming back to a day already finished, the score is the thing they came
-     for — but not stacked on top of the welcome. */
-  if(done){ openResults(); return; }
   /* One thing at a time. The board is still fading up and the map is still
      gliding into place when the sheet goes; starting the outline breathing on
      top of that made three movements at once and the pulse read as a flinch.
@@ -1783,7 +1780,6 @@ document.getElementById("howto").onclick = ()=>{
   document.documentElement.classList.add("intro");
   openPop(welcome);
 };
-openPop(welcome);
 
 function finish(silent){
   done = true;
@@ -1930,6 +1926,12 @@ function restore(){
 }
 
 if(!restore()) startRound();
+/* The welcome opens the day. A day already finished has nothing to open: the
+   board is what a returning player came back to — the five marked on the
+   map, the strip, See your score — so the sheet stays down and the board is
+   simply there. How to play still brings it up. */
+if(done) document.documentElement.classList.remove("intro");
+else openPop(welcome);
 </script>
 </body>
 </html>
