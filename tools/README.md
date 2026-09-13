@@ -161,15 +161,18 @@ it from the state outline and inlines it as an SVG data URI.
 
 ## The daily five
 
-`EASY`, `MID` and `HARD` in the template are the draw. A day takes one county
-from EASY, one from EASY+MID, one from MID, one from MID+HARD and one from
-HARD, rejecting any it has already taken, seeded off the date — so everyone
-gets the same five and the same order.
+`drawFive` in the template is the draw: the 120 county names in sorted
+order, shuffled off a seed hashed from the date, first five taken. Everyone
+gets the same five in the same order, and a county cannot come up twice in a
+day. Every county is as likely as every other. There used to be three
+difficulty tiers weighting the draw, with the later rounds counting double and
+triple towards a total of 1000, but on the map one county proved about as hard
+to find as the next, so the weighting measured nothing; the total is now a
+plain sum out of 500.
 
-Between them the three tiers must name all 120 counties, exactly once each;
-`build.js` fails if any county is in none of them or in two. That check exists
-because 33 counties sat in no tier for a while, which nothing could catch from
-the outside: the game ran perfectly and simply never mentioned them.
+The function is written on one line because `daycheck.js` and `rotation.js`
+lift it out of the built page by regex, along with the seed and the PRNG, so
+both scripts measure exactly what ships.
 
 The day itself is Eastern, not the player's own clock — the zone Louisville,
 Lexington and Frankfort keep. It used to be local, which meant that between
@@ -181,10 +184,7 @@ instant and asserts they all draw the same five.
 
 `node tools/rotation.js [days]` replays the shipped generator over consecutive
 dates and reports how often each county comes round and when the five first
-repeat. It measures the build rather than an idealised model, which matters:
-the tiers cut the space from the 190,578,024 sets a flat draw would give to
-about 55 million, and make an EASY county three times likelier on a given day
-than a HARD one.
+repeat. It measures the build rather than an idealised model.
 
 `facts.json` is hand-maintained, not generated — it is not part of this
 pipeline and survives a full map rebuild.

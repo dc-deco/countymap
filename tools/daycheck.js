@@ -17,15 +17,10 @@ eval([
   src(/function zoneIso\(d\)\{[\s\S]*?\n\}/),
   src(/^function seedFor\(d\)\{.*$/m),
   src(/^function rng\(s\)\{.*$/m),
+  src(/^function drawFive\(rand, names\)\{.*$/m),
 ].join('\n'));
-const EASY = grab('EASY'), MID = grab('MID'), HARD = grab('HARD');
-const TIER = [EASY, EASY.concat(MID), MID, MID.concat(HARD), HARD];
-function puzzleFor(iso){
-  const rand = rng(seedFor(iso)), out = [];
-  for (const t of TIER){ let n, g = 0; do { n = t[Math.floor(rand() * t.length)]; g++; }
-    while (out.includes(n) && g < 80); out.push(n); }
-  return out;
-}
+const NAMES = grab('NAMES').slice().sort();
+const puzzleFor = iso => drawFive(rng(seedFor(iso)), NAMES);
 
 const ZONES = ['America/New_York','America/Chicago','America/Denver','America/Los_Angeles',
                'Pacific/Honolulu','Europe/London','Europe/Helsinki','Asia/Kolkata',
