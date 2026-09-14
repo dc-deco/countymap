@@ -7,7 +7,8 @@ screen icon. Both are built from the same relief and the same county paths the
 game itself draws, so a shared link looks like the thing it opens.
 
   share.jpg             1200x630, what a pasted link unfurls to
-  apple-touch-icon.png  180x180, the home screen icon
+  apple-touch-icon.png  180x180, the home screen icon iOS takes
+  icon-512.png          512x512, the same for the manifest, so Android installs
 
 Usage: python3 tools/social.py
 """
@@ -156,17 +157,25 @@ card.resize((W, H), Image.LANCZOS).convert('RGB').save(
     os.path.join(OUT, 'share.jpg'), quality=88, optimize=True, progressive=True)
 
 # ---- home screen icon: the state, tight, on paper ----
-S = 180
-pad = 14
-kw, kh = (x1 - x0) * 1.06, (y1 - y0) * 1.06
-iw = S - pad * 2
-ih = max(1, round(iw * kh / kw))
-img, P = crop(kw, kh, iw, ih)
-lines(img, P, False, 1)
-icon = Image.new('RGB', (S, S), PAPER)
-icon.paste(img.convert('RGB'), (pad, (S - ih) // 2))
-icon.save(os.path.join(OUT, 'apple-touch-icon.png'), optimize=True)
+# Opaque, square, and the state nearly edge to edge: the OS rounds the corners
+# itself, would paint any transparency black, and shows the thing at 60 points,
+# where a thin outline floating in margin reads as a smudge. The border is
+# drawn at 2x and downsampled so it stays a line rather than a stair.
+def icon(S, name):
+    pad = round(S * 0.045)
+    ss = 2
+    kw, kh = (x1 - x0) * 1.03, (y1 - y0) * 1.03
+    iw = (S - pad * 2) * ss
+    ih = max(1, round(iw * kh / kw))
+    img, P = crop(kw, kh, iw, ih)
+    lines(img, P, False, max(1, round(S * ss / 180)))
+    out = Image.new('RGB', (S * ss, S * ss), PAPER)
+    out.paste(img.convert('RGB'), (pad * ss, (S * ss - ih) // 2))
+    out.resize((S, S), Image.LANCZOS).save(os.path.join(OUT, name), optimize=True)
 
-for n in ('share.jpg', 'apple-touch-icon.png'):
+icon(180, 'apple-touch-icon.png')   # what iOS takes
+icon(512, 'icon-512.png')           # what the manifest offers Android
+
+for n in ('share.jpg', 'apple-touch-icon.png', 'icon-512.png'):
     p = os.path.join(OUT, n)
     print(f'  {n}  {Image.open(p).size[0]}x{Image.open(p).size[1]}  {os.path.getsize(p)/1024:.0f} KB')
