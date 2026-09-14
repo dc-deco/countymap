@@ -450,12 +450,6 @@ dialog.pop .step{margin:0 0 2px}
 .resverdict{font-size:24px;line-height:1.12;font-weight:700;letter-spacing:-.01em;margin:0 0 8px;padding-right:36px}
 dialog.pop .big{font-size:44px;font-weight:700;letter-spacing:-.01em;line-height:1;margin:0}
 dialog.pop #copy{width:100%}
-/* the lesser option under the share button: same width, the quiet style */
-dialog.pop #install{width:100%;margin-top:8px}
-dialog.pop #install[hidden]{display:none}
-/* the how-to for iOS, which has no install prompt of its own */
-.install{font-size:13px;line-height:1.45;color:var(--ink-2);margin:8px 0 0;text-align:center}
-.install[hidden]{display:none}
 /* The one section head left, in the welcome sheet. At 11px and .12em it was
    spelling the words out a letter at a time; at 17px bold with a hair of
    tracking it reads in one go, in the same ink as the button below it. */
@@ -735,8 +729,6 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <p class="tally" id="resTally"></p>
   <pre id="share"></pre>
   <button id="copy" class="primary">Share your score</button>
-  <button id="install" hidden>Add to Home Screen</button>
-  <p class="install" id="installHint" hidden></p>
   <p class="next" id="resNext" aria-live="off"></p>
   <ol class="recap" id="recap"></ol>
   </div>
@@ -1716,63 +1708,6 @@ function wireShare(share){
   };
 }
 
-/* "Add to Home Screen", under the share button. It is a button only where
-   it can do something: on Android and desktop Chrome the browser hands over
-   an install prompt and one tap installs; on iOS there is no prompt to hand
-   over, so the tap shows the two steps Safari makes you take yourself.
-   Everywhere else, and once already installed, the button stays hidden. */
-let installPrompt = null;
-window.addEventListener("beforeinstallprompt", e => {
-  e.preventDefault();
-  installPrompt = e;
-  wireInstall();
-});
-const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
-  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-const isInstalled = () => navigator.standalone === true ||
-  (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
-function wireInstall(){
-  const btn = document.getElementById("install");
-  const hint = document.getElementById("installHint");
-  if(isInstalled() || !(installPrompt || isIOS)){ btn.hidden = true; return; }
-  btn.hidden = false;
-  btn.onclick = async ()=>{
-    if(installPrompt){
-      const p = installPrompt;
-      installPrompt = null;
-      try{
-        p.prompt();
-        const {outcome} = await p.userChoice;
-        if(outcome === "accepted"){ btn.hidden = true; return; }
-      }catch(e){}
-      installPrompt = p;
-      return;
-    }
-    /* iOS: the share glyph is drawn inline so the line matches the one on
-       the toolbar. Storage there is the app's own, so the streak on the home
-       screen starts fresh — and, unlike Safari's, is not wiped after a week
-       away. */
-    hint.replaceChildren(
-      "Tap ", shareGlyph(), ", then ",
-      Object.assign(document.createElement("b"), {textContent: "Add to Home Screen"}),
-      ". The icon keeps its own streak, and Safari can\u2019t clear it.");
-    hint.hidden = false;
-    btn.hidden = true;
-  };
-}
-function shareGlyph(){
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 16 20");
-  svg.setAttribute("width", "13"); svg.setAttribute("height", "16");
-  svg.setAttribute("aria-label", "Share"); svg.setAttribute("role", "img");
-  svg.style.cssText = "vertical-align:-3px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round";
-  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  path.setAttribute("d", "M8 1v12M4 5l4-4 4 4M3 9H1v10h14V9h-2");
-  svg.appendChild(path);
-  return svg;
-}
-window.addEventListener("appinstalled", () => { document.getElementById("install").hidden = true; });
-
 function releaseLock(){
   /* only unlock once nothing is left open */
   if(!document.querySelector("dialog.pop[open]")) document.documentElement.classList.remove("locked");
@@ -2038,7 +1973,6 @@ function finish(silent){
   big.appendChild(of);
   document.getElementById("share").textContent = share;
   wireShare(share);
-  wireInstall();
 
   startCountdown();
 
