@@ -156,21 +156,26 @@ d.text((58 * SS, 134 * SS), 'How well do you know Kentucky?', font=ttf(400, 31 *
 card.resize((W, H), Image.LANCZOS).convert('RGB').save(
     os.path.join(OUT, 'share.jpg'), quality=88, optimize=True, progressive=True)
 
-# ---- home screen icon: the state, tight, on paper ----
-# Opaque, square, and the state nearly edge to edge: the OS rounds the corners
-# itself, would paint any transparency black, and shows the thing at 60 points,
-# where a thin outline floating in margin reads as a smudge. The border is
-# drawn at 2x and downsampled so it stays a line rather than a stair.
+# ---- home screen icon: the state in grass green on a goldenrod ground ----
+# Opaque and square, since the OS rounds the corners itself and would paint
+# any transparency black. The two game colours, flat: the relief and the
+# county grid are gone, because at 60 points they were a smudge and what
+# reads is a silhouette on a colour. The state runs nearly edge to edge with
+# a dark rule around it, drawn at 2x and downsampled so it stays a line.
+GRASS = (67, 112, 60)
 def icon(S, name):
-    pad = round(S * 0.045)
     ss = 2
-    kw, kh = (x1 - x0) * 1.03, (y1 - y0) * 1.03
-    iw = (S - pad * 2) * ss
-    ih = max(1, round(iw * kh / kw))
-    img, P = crop(kw, kh, iw, ih)
-    lines(img, P, False, max(1, round(S * ss / 180)))
-    out = Image.new('RGB', (S * ss, S * ss), PAPER)
-    out.paste(img.convert('RGB'), (pad * ss, (S * ss - ih) // 2))
+    pad = round(S * 0.05) * ss
+    W = S * ss
+    kw, kh = x1 - x0, y1 - y0
+    sc = (W - pad * 2) / kw
+    ox, oy = pad, (W - kh * sc) / 2
+    P = lambda p: ((p[0] - x0) * sc + ox, (p[1] - y0) * sc + oy)
+    out = Image.new('RGB', (W, W), GOLD)
+    d = ImageDraw.Draw(out)
+    for ring in rings(C['outline']): d.polygon([P(p) for p in ring], fill=GRASS)
+    for ring in rings(C['outline']):
+        d.line([P(p) for p in ring] + [P(ring[0])], fill=INK, width=max(2, round(W / 120)), joint='curve')
     out.resize((S, S), Image.LANCZOS).save(os.path.join(OUT, name), optimize=True)
 
 icon(180, 'apple-touch-icon.png')   # what iOS takes
