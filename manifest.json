@@ -1,0 +1,15 @@
+{
+  "name": "County As Hell",
+  "short_name": "County As Hell",
+  "description": "Five Kentucky counties a day. You tell us where the hell they are.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E7EBE8",
+  "theme_color": "#E7EBE8",
+  "icons": [
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

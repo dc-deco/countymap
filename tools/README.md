@@ -14,6 +14,11 @@ If `tools/data/` is present (it is committed), no network is needed:
 node tools/build.js          # tools/data/* + tools/template.html -> index.html
 ```
 
+The three files the page cannot inline — `share.jpg` for link previews,
+`apple-touch-icon.png` and `icon-512.png` for the home screen — come from
+`python3 tools/social.py` (needs Pillow and fontTools). `manifest.json` is
+hand-written and points at the two icons.
+
 Edit `tools/template.html` for any markup, CSS or game-logic change, then
 rebuild. Do not hand-edit `index.html` — it is generated and will be overwritten.
 
