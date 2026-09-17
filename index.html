@@ -1173,6 +1173,10 @@ function nearPin(cx, cy){
   return Math.hypot(cx - (guess.x * m.a + m.e), cy - (guess.y * m.d + m.f)) <= 26;
 }
 svg.addEventListener("pointerdown", e=>{
+  /* A primary touch is by definition the first finger of a new sequence, so
+     anything still in the map is a finger the browser forgot to release.
+     iOS Safari does that after a pinch (see the touchend handler below). */
+  if(e.pointerType === "touch" && e.isPrimary && ptrs.size) forgetPtrs();
   svg.setPointerCapture(e.pointerId);
   ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===1){
@@ -1260,8 +1264,40 @@ function placePin(x, y, hit){
   lockBtn.disabled = false;
   say("Pin dropped. Move it or lock it in.");
 }
-svg.addEventListener("pointerup", endPtr);
-svg.addEventListener("pointercancel", endPtr);
+/* Listen on the window, not the svg: the pointer is captured, so a release
+   normally arrives here anyway, but when capture is quietly dropped (a finger
+   lifting over the zoom buttons or off the map) the up lands on whatever is
+   under it, and a pointer that is never released holds the map hostage. */
+window.addEventListener("pointerup", e=>{ if(ptrs.has(e.pointerId)) endPtr(e); });
+window.addEventListener("pointercancel", e=>{ if(ptrs.has(e.pointerId)) endPtr(e); });
+
+/* iOS Safari loses pointerups in multi-touch: when both fingers of a pinch
+   lift at once it often reports only one of them, and a finger lifted over
+   the zoom buttons or outside the map is not always released to the svg.
+   The pointer it forgot stays in ptrs, every later tap counts as a second
+   finger, and the map can pan and zoom but never takes a pin again — "as if
+   one finger were still held on the screen". Touch events are not dropped
+   the same way, so on every touchend reconcile ptrs with the touches the
+   browser says are still down, and release the rest by hand. Safari's
+   pointerIds are its touch identifiers, so matching by id is exact there;
+   elsewhere pointerup fires first and there is nothing left to reconcile. */
+function forgetPtrs(){ for(const id of [...ptrs.keys()]) endPtr({pointerId:id, ...ptrs.get(id), type:"pointercancel"}); }
+function endPtrsNotIn(e, type){
+  const live = new Set([...e.touches].map(t => t.identifier));
+  if(ptrs.size <= live.size) return;
+  const lifted = new Map([...e.changedTouches].map(t => [t.identifier, t]));
+  const stale = [...ptrs.keys()].filter(id => !live.has(id));
+  /* ids that match nothing at all: not Safari's numbering, so fall back to
+     the count and drop the pointers the browser tracked longest */
+  const drop = stale.length >= ptrs.size - live.size ? stale
+             : [...ptrs.keys()].slice(0, ptrs.size - live.size);
+  for(const id of drop){
+    const t = lifted.get(id), p = ptrs.get(id);
+    endPtr({pointerId:id, clientX: t ? t.clientX : p.x, clientY: t ? t.clientY : p.y, type});
+  }
+}
+window.addEventListener("touchend", e=>endPtrsNotIn(e, "pointerup"));
+window.addEventListener("touchcancel", e=>endPtrsNotIn(e, "pointercancel"));
 
 function scoreFor(mi, exact){
   if(exact) return 100;
