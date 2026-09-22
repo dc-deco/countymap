@@ -190,6 +190,16 @@ svg#map{display:block;flex:0 0 100%;width:100%;height:auto;aspect-ratio:2000 / 2
    is tied to a shape. After .peek, so it wins over everything. */
 #counties path.miss{fill:rgba(155,59,38,.5);stroke:#4A1C10;
   stroke-width:calc(var(--cw,.75) * 2.67);stroke-opacity:1}
+/* and the whole board shakes its head: a few pixels side to side, dying out
+   over a third of a second, the way a wrong password does. The column
+   rather than the map alone, so the "no" is felt rather than looked for. */
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  15%{transform:translateX(-6px)} 30%{transform:translateX(5px)}
+  45%{transform:translateX(-4px)} 60%{transform:translateX(3px)} 75%{transform:translateX(-1px)}
+}
+.wrap.shake{animation:shake .36s cubic-bezier(.36,.07,.19,.97)}
+@media (prefers-reduced-motion: reduce){.wrap.shake{animation:none}}
 /* Pill-shaped, and lifted off the page a little. Square corners on a panel
    the same colour as the card around it read as a box, not something to
    press; the radius and the shadow are what say "button" before the label
@@ -2136,6 +2146,20 @@ function paintPractice(){
     p.classList.toggle("hit", n === pracLast);
   }
 }
+const wrap = document.querySelector(".wrap");
+function shakeBoard(){
+  /* the buzz and the red county still say no; without an animation there
+     would be no end event to take the class off again */
+  if(reduceMotion.matches) return;
+  /* taken off and put back with a reflow between, so two quick misses each
+     get their own shake instead of the second landing on a running one */
+  wrap.classList.remove("shake");
+  void wrap.offsetWidth;
+  wrap.classList.add("shake");
+}
+wrap.addEventListener("animationend", e => {
+  if(e.target === wrap && e.animationName === "shake") wrap.classList.remove("shake");
+});
 let missTimer = null, missPath = null;
 function flashMiss(path){
   if(missPath) missPath.classList.remove("miss");
@@ -2216,6 +2240,7 @@ function practiceTap(p, hit){
     return;
   }
   buzz(25);
+  shakeBoard();
   if(county){
     const path = countyPaths.find(x => x.dataset.n === county);
     if(path) flashMiss(path);
