@@ -200,6 +200,18 @@ instant and asserts they all draw the same five.
 dates and reports how often each county comes round and when the five first
 repeat. It measures the build rather than an idealised model.
 
+## From Adair to Woodford
+
+Once the day's five are done the board offers a second game, the practice
+run: all 120 counties, asked one at a time in alphabetical order, tap to
+answer. A wrong tap names the county it landed on (or the state, off the
+map) and asks again; there is no score and nothing to share, only the clock,
+which pauses while the tab is in the background. It reuses the daily's map,
+readout and county name, hides the strip and the lock row, and lays the
+finished board out again on the way out. The only thing it writes is the
+best time, `practiceBest` on the same record, in seconds. The order is
+`NAMES` sorted, so it does not depend on `counties.json`'s order either.
+
 `facts.json` is hand-maintained, not generated — it is not part of this
 pipeline and survives a full map rebuild.
 
