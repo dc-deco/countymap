@@ -1479,8 +1479,10 @@ function startRound(){
      telling a first-timer what to do — there is nothing else on the screen
      that says the map is the input, and it clears on the first tap */
   say("Tap the map to drop your pin.");
-  /* a hint bought for this round before a reload was still bought */
-  if(recordIsToday() && record.hintOn === round) takeHint();
+  /* a hint bought for this round before a reload was still bought. Only the
+     round in hand can carry one — the marker is cleared as each round locks —
+     so a stale marker from an older build's record is not honoured either */
+  if(recordIsToday() && record.n === round && record.hintOn === round) takeHint();
   hideReveal();
   /* the round before ended zoomed in on its answer; the next opens back out,
      gliding rather than cutting, unless this is the opening of the day */
@@ -1569,7 +1571,11 @@ function takeHint(){
   say(guess ? "Pin dropped. Move it or lock it in." : "Tap the map to drop your pin.");
   /* remembered at once, so a reload between buying and locking cannot hand
      the seat back for free. A record from another day is started over first,
-     or its old rounds would be restored as today's. */
+     or its old rounds would be restored as today's. hintOn lives only as long
+     as the round it was bought for: lockIn and finish clear it, because a
+     marker that outlived its round used to be picked up again the next day,
+     once the day's first lock had stamped today's date on the record, and
+     the same round was then bought for the player without a press. */
   if(record.day !== iso){
     record.n = 0; record.scores = []; record.exacts = [];
     record.dists = []; record.strays = []; record.hints = [];
@@ -1617,6 +1623,10 @@ function lockIn(){
   record.day = iso; record.n = round + 1; record.five = puzzle;
   record.scores = scores; record.exacts = exacts;
   record.dists = dists; record.strays = strays; record.hints = hints;
+  /* the hint, if there was one, is spent with the round: hints[] keeps the
+     fact of it, and the marker that re-applies a bought hint after a reload
+     must not survive to be matched against another day's round */
+  delete record.hintOn;
   writeRecord(record);
   /* the round is settled: panning and zooming stay live so the reveal can be
      studied, but the map stops accepting pins */
@@ -1938,6 +1948,7 @@ function finish(silent){
   record.day = iso; record.n = 5; record.five = puzzle;
   record.scores = scores; record.exacts = exacts;
   record.dists = dists; record.strays = strays; record.hints = hints;
+  delete record.hintOn;                                // no round is in hand
   writeRecord(record);
   document.getElementById("step").textContent = "Done";
   const target = document.getElementById("target");
