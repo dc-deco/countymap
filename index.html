@@ -467,6 +467,9 @@ dialog.pop .step{margin:0 0 2px}
 .resverdict{font-size:24px;line-height:1.12;font-weight:700;letter-spacing:-.01em;margin:0 0 8px;padding-right:36px}
 dialog.pop .big{font-size:44px;font-weight:700;letter-spacing:-.01em;line-height:1;margin:0}
 dialog.pop #copy{width:100%}
+/* the way into the practice run, under the share button and in the quieter
+   style, so the day's score keeps the primary weight on its own card */
+dialog.pop #resPracBtn{width:100%;margin-top:8px}
 /* The one section head left, in the welcome sheet. At 11px and .12em it was
    spelling the words out a letter at a time; at 17px bold with a hair of
    tracking it reads in one go, in the same ink as the button below it. */
@@ -754,8 +757,8 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <p class="tally" id="resTally"></p>
   <pre id="share"></pre>
   <button id="copy" class="primary">Share your score</button>
+  <button id="resPracBtn">Play From Adair to Woodford</button>
   <p class="next" id="resNext" aria-live="off"></p>
-  <p class="next">Keep going: <button id="resPracBtn">From Adair to Woodford</button></p>
   <ol class="recap" id="recap"></ol>
   </div>
   <div class="more" aria-hidden="true"></div>
