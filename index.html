@@ -735,7 +735,8 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   the hell they are.</p>
   <p class="body">Poke around the map and drop your pin. Think you&#39;ve got it? Lock it in.</p>
   <p class="body">Stuck? A hint tells you the county seat, for half the points.</p>
-  <p class="body">Done for the day? Practice all 120, A to Z, against the clock.</p>
+  <p class="body">Done for the day? Play <b>From Adair to Woodford</b>: all 120 counties, in
+  order, against the clock.</p>
   <p class="body">Come back tomorrow for 5 more. Lord knows we&#39;ve got enough of &#39;em.</p>
   <button id="welGo" class="primary">Let&#39;s go</button>
   <p class="credits">Relief: USGS &amp; SRTM via Mapzen Terrain Tiles &middot; Boundaries: US Census &middot;
@@ -754,7 +755,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <pre id="share"></pre>
   <button id="copy" class="primary">Share your score</button>
   <p class="next" id="resNext" aria-live="off"></p>
-  <p class="next"><button id="resPracBtn">Practice all 120, A to Z</button></p>
+  <p class="next">Keep going: <button id="resPracBtn">From Adair to Woodford</button></p>
   <ol class="recap" id="recap"></ol>
   </div>
   <div class="more" aria-hidden="true"></div>
@@ -2048,7 +2049,7 @@ function finish(silent){
 
   document.getElementById("final").innerHTML =
     `<div class="final"><button id="reopen" class="primary">See your score</button>` +
-    `<button id="practiceBtn">Practice all 120, A to Z</button></div>`;
+    `<button id="practiceBtn">From Adair to Woodford</button></div>`;
   document.getElementById("reopen").onclick = openResults;
   document.getElementById("practiceBtn").onclick = startPractice;
   if(!silent) openResults();
@@ -2083,8 +2084,8 @@ function startCountdown(){
    the next throttled tick */
 document.addEventListener("visibilitychange", () => { if(!document.hidden && nextTimer) startCountdown(); });
 
-/* --- Practice: all 120, A to Z, against the clock ---------------------------
-   For after the day's five are done. The map is wiped and the counties are
+/* --- From Adair to Woodford: all 120, in order, against the clock -----------
+   The practice run, for after the day's five are done. The map is wiped and the counties are
    asked one at a time in alphabetical order, Adair to Woodford; a tap on the
    right one fills it in and the next is asked, a tap on the wrong one names
    it and asks again, and keeps asking. There is no score to lose and no
@@ -2144,7 +2145,7 @@ function flashMiss(path){
   }, 550);
 }
 function askNext(){
-  document.getElementById("step").textContent = `Practice \u00B7 ${pracAt + 1} / ${ROLL.length}`;
+  document.getElementById("step").textContent = `Adair to Woodford \u00B7 ${pracAt + 1} / ${ROLL.length}`;
   document.getElementById("target").textContent = ROLL[pracAt] + " County";
   say(pracAt === 0 ? "Tap it on the map. Miss, and just try again." : "Tap it on the map.");
 }
@@ -2188,7 +2189,7 @@ function completePractice(){
   const best = record.practiceBest;
   const newBest = !(best > 0) || secs < best;
   if(newBest){ record.practiceBest = secs; writeRecord(record); }
-  document.getElementById("step").textContent = `Practice \u00B7 ${ROLL.length} / ${ROLL.length}`;
+  document.getElementById("step").textContent = `Adair to Woodford \u00B7 ${ROLL.length} / ${ROLL.length}`;
   const target = document.getElementById("target");
   target.classList.add("ending");
   target.textContent = "All 120. You're county as hell.";
