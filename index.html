@@ -185,6 +185,11 @@ svg#map{display:block;flex:0 0 100%;width:100%;height:auto;aspect-ratio:2000 / 2
    the day's record. Last in the cascade, so it wins. */
 #counties path.peek{fill:rgba(250,196,32,.62);stroke:#3A2B08;
   stroke-width:calc(var(--cw,.75) * 2.67);stroke-opacity:1}
+/* Practice: a wrong tap flushes the county it landed on madder for a beat,
+   so the miss is seen where it happened and the name the readout gives it
+   is tied to a shape. After .peek, so it wins over everything. */
+#counties path.miss{fill:rgba(155,59,38,.5);stroke:#4A1C10;
+  stroke-width:calc(var(--cw,.75) * 2.67);stroke-opacity:1}
 /* Pill-shaped, and lifted off the page a little. Square corners on a panel
    the same colour as the card around it read as a box, not something to
    press; the radius and the shadow are what say "button" before the label
@@ -226,6 +231,16 @@ dialog.pop:focus,dialog.pop:focus-visible{outline:none}
 /* first press arms it, second confirms; a stray thumb should not cost half a
    round, and a pop-up would be heavier than the moment deserves */
 #hint.armed{border-color:var(--ink);color:var(--ink);background:var(--panel)}
+/* Practice takes the same row: the clock where Lock it in was, since a tap
+   is the answer and there is nothing to lock, and the way out beside it in
+   the quieter style. Play again arrives only once the run is over. */
+.pracrow{display:flex;gap:8px;align-items:center}
+.pracrow[hidden]{display:none}
+.clock{flex:1 1 auto;min-width:0;font-size:24px;font-weight:700;letter-spacing:-.01em;
+  font-variant-numeric:tabular-nums;line-height:1;padding:6px 2px}
+/* the two buttons the finished run shows have to share the row with the
+   clock on a 320px phone, so they give a little rather than spill */
+#pracStop,#pracAgain{flex:0 1 auto;min-width:0;white-space:nowrap;padding:11px 14px}
 .primary{background:var(--ink);color:var(--paper);border-color:var(--ink);
   box-shadow:0 2px 6px rgba(20,28,24,.26)}
 .primary:active{background:#2F3B35;box-shadow:0 1px 2px rgba(20,28,24,.2)}
@@ -325,6 +340,8 @@ body.revealing .readout,body.revealing .tape{
    guess, and the states are the whole point of the strip. --sw is the only
    size knob; everything inside is derived from it. */
 .tape{--sw:52px;display:flex;gap:6px;margin-top:10px;padding-top:2px}
+/* display:flex would outrank the attribute; practice puts the strip away */
+.tape[hidden]{display:none}
 /* below the narrowest phone the cell, not the knob, sets the width; drop the
    marker so a 3-digit score cannot outgrow the field it sits in */
 @media (max-width:329px){.tape{--sw:44px}}
@@ -499,6 +516,7 @@ dialog.pop #welGo{width:100%;margin-top:18px}
 .linky:hover{color:var(--ink)}
 .final{margin-top:20px;border-top:2px solid var(--ink);padding-top:14px}
 .final button{width:100%}
+.final button + button{margin-top:8px}
 .final .big{font-size:46px;font-weight:700;letter-spacing:-.02em;line-height:1}
 .final .of{font-size:16px;color:var(--ink-2);font-weight:400}
 /* rounded to sit with the pill under it, but only 12px — a readout you
@@ -689,6 +707,11 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
     <button id="lock" class="primary" disabled>Lock it in</button>
     <button id="hint">Hint &middot; half points</button>
   </div>
+  <div class="pracrow" id="pracrow" hidden>
+    <div class="clock" id="pracClock" aria-live="off">0:00</div>
+    <button id="pracAgain" class="primary" hidden>Play again</button>
+    <button id="pracStop">Stop</button>
+  </div>
   <div class="reveal" id="reveal" hidden>
     <div class="revealbody">
       <p class="rhead" id="revealHead"><span class="rverdict" id="revealVerdict"></span><b class="rpts" id="revealPts"></b></p>
@@ -712,6 +735,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   the hell they are.</p>
   <p class="body">Poke around the map and drop your pin. Think you&#39;ve got it? Lock it in.</p>
   <p class="body">Stuck? A hint tells you the county seat, for half the points.</p>
+  <p class="body">Done for the day? Practice all 120, A to Z, against the clock.</p>
   <p class="body">Come back tomorrow for 5 more. Lord knows we&#39;ve got enough of &#39;em.</p>
   <button id="welGo" class="primary">Let&#39;s go</button>
   <p class="credits">Relief: USGS &amp; SRTM via Mapzen Terrain Tiles &middot; Boundaries: US Census &middot;
@@ -730,6 +754,7 @@ pre{font-family:inherit;font-size:15px;background:var(--panel);border:1px solid 
   <pre id="share"></pre>
   <button id="copy" class="primary">Share your score</button>
   <p class="next" id="resNext" aria-live="off"></p>
+  <p class="next"><button id="resPracBtn">Practice all 120, A to Z</button></p>
   <ol class="recap" id="recap"></ol>
   </div>
   <div class="more" aria-hidden="true"></div>
@@ -1243,6 +1268,7 @@ function endPtr(e){
   const hit = (el && el.parentNode && el.parentNode.id==="counties") ? el.dataset.n : null;
   /* the day is done: a tap asks about a county instead of placing a pin.
      Mid-run the map only takes pins, and only before the round is locked. */
+  if(practice){ practiceTap(p, hit); return; }
   if(done){ const c = hit || countyAt(p.x, p.y); if(c) peek(c); return; }
   if(revealing) return;
   placePin(p.x, p.y, hit);
@@ -1452,7 +1478,7 @@ const played = [];
 function paintPlayed(){
   const seen = new Set(played);
   document.querySelectorAll("#counties path").forEach(p=>{
-    p.classList.remove("hit");
+    p.classList.remove("hit", "miss");
     p.classList.toggle("past", seen.has(p.dataset.n));
   });
 }
@@ -2021,8 +2047,10 @@ function finish(silent){
   });
 
   document.getElementById("final").innerHTML =
-    `<div class="final"><button id="reopen" class="primary">See your score</button></div>`;
+    `<div class="final"><button id="reopen" class="primary">See your score</button>` +
+    `<button id="practiceBtn">Practice all 120, A to Z</button></div>`;
   document.getElementById("reopen").onclick = openResults;
+  document.getElementById("practiceBtn").onclick = startPractice;
   if(!silent) openResults();
 }
 
@@ -2054,6 +2082,148 @@ function startCountdown(){
 /* a tab brought back from the background catches up at once rather than on
    the next throttled tick */
 document.addEventListener("visibilitychange", () => { if(!document.hidden && nextTimer) startCountdown(); });
+
+/* --- Practice: all 120, A to Z, against the clock ---------------------------
+   For after the day's five are done. The map is wiped and the counties are
+   asked one at a time in alphabetical order, Adair to Woodford; a tap on the
+   right one fills it in and the next is asked, a tap on the wrong one names
+   it and asks again, and keeps asking. There is no score to lose and no
+   share, only the clock, which is the whole of the result. It shares the
+   map, the readout and the county name with the daily, and the daily's
+   finished board is laid out again on the way out. Nothing is written back
+   but the best time. */
+const ROLL = NAMES.slice().sort();
+const pracRow = document.getElementById("pracrow");
+const pracClock = document.getElementById("pracClock");
+const pracStop = document.getElementById("pracStop");
+const pracAgain = document.getElementById("pracAgain");
+const finalBox = document.getElementById("final");
+let practice = false, pracAt = 0, pracFilled = new Set(), pracLast = null;
+/* Elapsed time is banked when the tab goes into the background and the clock
+   restarted when it comes back, so a phone put down mid-run is not charged
+   for the time it spent in a pocket. */
+let pracT0 = 0, pracBank = 0, pracRunning = false, pracTimer = null;
+function pracElapsed(){ return pracBank + (pracRunning ? performance.now() - pracT0 : 0); }
+/* m:ss, and only past an hour the full clock the countdown keeps */
+function runClock(ms){
+  const s = Math.floor(ms / 1000);
+  return s >= 3600 ? clockLeft(s) : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+function showClock(){ pracClock.textContent = runClock(pracElapsed()); }
+function pausePractice(){
+  if(!pracRunning) return;
+  pracBank += performance.now() - pracT0; pracRunning = false;
+}
+function resumePractice(){
+  if(pracRunning || !practice || pracAt >= ROLL.length) return;
+  pracT0 = performance.now(); pracRunning = true;
+}
+document.addEventListener("visibilitychange", () => {
+  if(!practice) return;
+  if(document.hidden) pausePractice(); else resumePractice();
+});
+
+/* the filled counties wear the daily's played colour and the one just found
+   its answered colour, so the map builds up the same way the day's five do */
+function paintPractice(){
+  for(const p of countyPaths){
+    const n = p.dataset.n;
+    p.classList.toggle("past", pracFilled.has(n) && n !== pracLast);
+    p.classList.toggle("hit", n === pracLast);
+  }
+}
+let missTimer = null, missPath = null;
+function flashMiss(path){
+  if(missPath) missPath.classList.remove("miss");
+  clearTimeout(missTimer);
+  missPath = path;
+  path.classList.add("miss");
+  missTimer = setTimeout(() => {
+    path.classList.remove("miss");
+    if(missPath === path) missPath = null;
+  }, 550);
+}
+function askNext(){
+  document.getElementById("step").textContent = `Practice \u00B7 ${pracAt + 1} / ${ROLL.length}`;
+  document.getElementById("target").textContent = ROLL[pracAt] + " County";
+  say(pracAt === 0 ? "Tap it on the map. Miss, and just try again." : "Tap it on the map.");
+}
+function startPractice(){
+  if(!done) return;
+  if(dlg.open) closePop(dlg);
+  practice = true; pracAt = 0; pracFilled = new Set(); pracLast = null;
+  pracBank = 0; pracRunning = false;
+  clearPeek(); hideReveal();
+  /* a pin-taking cursor again: the last lock of the day left the grab one */
+  mapbox.classList.remove("revealing");
+  document.getElementById("target").classList.remove("ending");
+  tape.hidden = true;
+  finalBox.hidden = true;
+  pracRow.hidden = false;
+  pracAgain.hidden = true;
+  pracStop.textContent = "Stop";
+  paintPractice();
+  if(view.w < FULL.w - 0.5) glideTo({...FULL}, 480);
+  askNext();
+  resumePractice();
+  showClock();
+  clearInterval(pracTimer);
+  pracTimer = setInterval(showClock, 250);
+}
+function endPractice(){
+  clearInterval(pracTimer); pracTimer = null;
+  practice = false; pracRunning = false;
+  if(missPath){ missPath.classList.remove("miss"); missPath = null; }
+  pracRow.hidden = true;
+  tape.hidden = false;
+  finalBox.hidden = false;
+  /* the finished day's board, laid out the way a reload lays it out */
+  finish(true);
+}
+function completePractice(){
+  pausePractice();
+  clearInterval(pracTimer); pracTimer = null;
+  showClock();
+  const secs = Math.floor(pracElapsed() / 1000);
+  const best = record.practiceBest;
+  const newBest = !(best > 0) || secs < best;
+  if(newBest){ record.practiceBest = secs; writeRecord(record); }
+  document.getElementById("step").textContent = `Practice \u00B7 ${ROLL.length} / ${ROLL.length}`;
+  const target = document.getElementById("target");
+  target.classList.add("ending");
+  target.textContent = "All 120. You're county as hell.";
+  say(!(best > 0) ? "That's your time to beat."
+    : newBest ? `A new best, by ${runClock((best - secs) * 1000)}.`
+              : `Your best is ${runClock(best * 1000)}.`);
+  pracStop.textContent = "Today's map";
+  pracAgain.hidden = false;
+  buzz([14, 70, 32]);
+  if(view.w < FULL.w - 0.5) glideTo({...FULL}, 600);
+}
+function practiceTap(p, hit){
+  if(pracAt >= ROLL.length) return;            // run over: the map is just a map
+  const county = hit || countyAt(p.x, p.y);
+  const want = ROLL[pracAt];
+  if(county === want){
+    pracFilled.add(want); pracLast = want; pracAt++;
+    paintPractice();
+    buzz(10);
+    if(pracAt < ROLL.length) askNext(); else completePractice();
+    return;
+  }
+  buzz(25);
+  if(county){
+    const path = countyPaths.find(x => x.dataset.n === county);
+    if(path) flashMiss(path);
+    say(`That's ${county}. Try again.`);
+  }else{
+    const state = stateAt(p.x, p.y);
+    say(state ? `That's ${state}. Try again.` : "That's not Kentucky. Try again.");
+  }
+}
+pracStop.onclick = endPractice;
+pracAgain.onclick = startPractice;
+document.getElementById("resPracBtn").onclick = startPractice;
 
 /* A day already played is not played again. The five counties are the same
    for everybody, so a run you can retake until it is perfect is a score worth
